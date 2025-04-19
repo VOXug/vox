@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - VOX{% endblock %}
+
+{% block heading %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
+                <i class="fas fa-phone text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Total Calls</p>
+                <p class="text-2xl font-bold">{{ call_stats.total_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-500 mr-4">
+                <i class="fas fa-check-circle text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Completed Calls</p>
+                <p class="text-2xl font-bold">{{ call_stats.completed_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-500 mr-4">
+                <i class="fas fa-bullhorn text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Active Campaigns</p>
+                <p class="text-2xl font-bold">{{ active_campaigns|length }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100 text-purple-500 mr-4">
+                <i class="fas fa-chart-pie text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Completion Rate</p>
+                <p class="text-2xl font-bold">{{ "%.1f"|format(call_stats.completion_rate) }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Campaigns -->
+<div class="mb-8">
+    <h2 class="text-xl font-bold mb-4">Active Campaigns</h2>
+    {% if active_campaigns %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campaign</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calls</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for campaign in active_campaigns %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ campaign.name }}</div>
+                        <div class="text-sm text-gray-500">{{ campaign.description|truncate(50) }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ campaign.started_at.strftime('%Y-%m-%d %H:%M') if campaign.started_at else 'Not started' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ campaign.call_logs.count() }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="{{ url_for('dashboard.campaign_detail', id=campaign.id) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-6 text-center">
+        <p class="text-gray-500">No active campaigns at the moment.</p>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('admin.campaigns') }}" class="mt-2 inline-block text-indigo-600 hover:text-indigo-900">Create a campaign</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Calls -->
+<div class="mb-8">
+    <h2 class="text-xl font-bold mb-4">Recent Calls</h2>
+    {% if recent_calls %}
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campaign</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentiment</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for call in recent_calls %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ call.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ call.voter.phone_number }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ call.campaign.name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {% if call.status == 'completed' %}bg-green-100 text-green-800
+                            {% elif call.status in ['failed', 'busy', 'no-answer'] %}bg-red-100 text-red-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ call.status }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if call.sentiment %}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {% if call.sentiment == 'positive' %}bg-green-100 text-green-800
+                            {% elif call.sentiment == 'negative' %}bg-red-100 text-red-800
+                            {% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ call.sentiment }}
+                        </span>
+                        {% else %}
+                        <span class="text-gray-400">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="{{ url_for('dashboard.call_detail', id=call.id) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-6 text-center">
+        <p class="text-gray-500">No recent calls.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Call Statistics Chart -->
+<div>
+    <h2 class="text-xl font-bold mb-4">Call Statistics</h2>
+    <div class="bg-white rounded-lg shadow p-6">
+        <canvas id="callStatsChart" height="300"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Call Statistics Chart
+        const ctx = document.getElementById('callStatsChart').getContext('2d');
+        
+        // Prepare data for sentiment distribution
+        const sentimentLabels = ['Positive', 'Neutral', 'Negative'];
+        const sentimentData = [
+            {{ call_stats.sentiment_counts.get('positive', 0) }},
+            {{ call_stats.sentiment_counts.get('neutral', 0) }},
+            {{ call_stats.sentiment_counts.get('negative', 0) }}
+        ];
+        
+        // Prepare data for language distribution
+        const languageLabels = [];
+        const languageData = [];
+        
+        {% for lang, count in call_stats.language_counts.items() %}
+        languageLabels.push('{{ lang }}');
+        languageData.push({{ count }});
+        {% endfor %}
+        
+        // Create the chart
+        const callStatsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Completed', 'Failed', 'Positive', 'Neutral', 'Negative'],
+                datasets: [{
+                    label: 'Call Statistics',
+                    data: [
+                        {{ call_stats.completed_calls }},
+                        {{ call_stats.failed_calls }},
+                        {{ call_stats.sentiment_counts.get('positive', 0) }},
+                        {{ call_stats.sentiment_counts.get('neutral', 0) }},
+                        {{ call_stats.sentiment_counts.get('negative', 0) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(255, 99, 132, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Call Outcomes and Sentiment Distribution'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

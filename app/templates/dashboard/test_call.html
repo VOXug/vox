@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Test Call - VOX{% endblock %}
+
+{% block heading %}Test Call{% endblock %}
+
+{% block content %}
+<!-- Call Header -->
+<div class="flex justify-between items-center mb-6">
+  <div class="flex items-center">
+    <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 mr-4">
+      <i class="fas fa-phone-alt text-2xl"></i>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold">Test Call to {{ voter.name or 'Unknown Voter' }}</h2>
+      <p class="text-gray-500">{{ voter.phone_number }}</p>
+    </div>
+  </div>
+  
+  <div>
+    <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id) }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to Voter
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Call Configuration -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Configuration</h3>
+      
+      <div class="p-6">
+        <form id="callConfigForm">
+          <div class="mb-4">
+            <label for="voiceModel" class="block text-gray-700 font-medium mb-2">Voice Model</label>
+            <select id="voiceModel" name="voice_model" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              {% for model in voice_models %}
+              <option value="{{ model.id }}">{{ model.name }} ({{ model.language|upper }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-4">
+            <label for="language" class="block text-gray-700 font-medium mb-2">Language</label>
+            <select id="language" name="language" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="en" {% if voter.language_preference == 'en' %}selected{% endif %}>English</option>
+              <option value="sw" {% if voter.language_preference == 'sw' %}selected{% endif %}>Swahili</option>
+              <option value="lg" {% if voter.language_preference == 'lg' %}selected{% endif %}>Luganda</option>
+              <option value="ny" {% if voter.language_preference == 'ny' %}selected{% endif %}>Runyankole</option>
+            </select>
+          </div>
+          
+          <div class="mb-4">
+            <label for="initialMessage" class="block text-gray-700 font-medium mb-2">Initial Message</label>
+            <textarea id="initialMessage" name="initial_message" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">Hello, this is a test call from the campaign team. How are you today?</textarea>
+          </div>
+          
+          <div class="mb-4">
+            <div class="flex items-center">
+              <input type="checkbox" id="recordCall" name="record_call" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="recordCall" class="ml-2 block text-gray-700">
+                Record this call
+              </label>
+            </div>
+          </div>
+          
+          <button type="button" id="startCallBtn" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-phone mr-2"></i> Start Test Call
+          </button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Call Status -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Status</h3>
+      
+      <div class="p-6">
+        <div id="callStatus" class="mb-4">
+          <div class="flex items-center">
+            <div class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 mr-3">
+              <i class="fas fa-clock"></i>
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">Ready to start call</p>
+              <p class="text-sm text-gray-500">Configure settings and click Start Test Call</p>
+            </div>
+          </div>
+        </div>
+        
+        <div id="callTimer" class="text-center py-3 hidden">
+          <p class="text-sm text-gray-500">Call Duration</p>
+          <p class="text-2xl font-bold text-indigo-600">00:00</p>
+        </div>
+        
+        <div class="space-y-3 mt-6">
+          <button type="button" id="endCallBtn" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hidden">
+            <i class="fas fa-phone-slash mr-2"></i> End Call
+          </button>
+          
+          <a href="{{ url_for('dashboard.call_detail', id=call.id) }}" id="viewCallLogBtn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 hidden">
+            <i class="fas fa-clipboard-list mr-2"></i> View Call Log
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Call Interface -->
+  <div class="lg:col-span-2">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Interface</h3>
+      
+      <div class="p-6">
+        <!-- Call Conversation -->
+        <div id="conversationContainer" class="bg-gray-100 p-4 rounded-lg mb-4" style="height: 400px; overflow-y: auto;">
+          <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-comments text-4xl mb-2"></i>
+            <p>Conversation will appear here once the call starts</p>
+          </div>
+        </div>
+        
+        <!-- User Input -->
+        <div id="userInputContainer" class="hidden">
+          <div class="flex items-center mb-4">
+            <div class="flex-grow">
+              <div class="relative">
+                <input type="text" id="userInput" placeholder="Type your response..." class="w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="button" id="sendTextBtn" class="absolute right-2 top-2 text-indigo-600 hover:text-indigo-800">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+            <div class="ml-2">
+              <button type="button" id="startRecordingBtn" class="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white hover:bg-indigo-700">
+                <i class="fas fa-microphone"></i>
+              </button>
+              <button type="button" id="stopRecordingBtn" class="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 hidden">
+                <i class="fas fa-stop"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div id="recordingStatus" class="text-center py-2 text-sm text-gray-500 hidden">
+            Recording... <span id="recordingTime">0:00</span>
+          </div>
+        </div>
+        
+        <!-- Call Controls -->
+        <div id="callControls" class="flex justify-center space-x-4 mt-6 hidden">
+          <button type="button" id="muteBtn" class="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-300">
+            <i class="fas fa-microphone-slash"></i>
+          </button>
+          <button type="button" id="speakerBtn" class="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-300">
+            <i class="fas fa-volume-up"></i>
+          </button>
+          <button type="button" id="pauseBtn" class="h-12 w-12 rounded-full bg-yellow-500 flex items-center justify-center text-white hover:bg-yellow-600">
+            <i class="fas fa-pause"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Call Analytics -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mt-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Real-time Analytics</h3>
+      
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Detected Language</p>
+            <p id="detectedLanguage" class="text-gray-900 font-medium">-</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Sentiment</p>
+            <p id="sentiment" class="text-gray-900 font-medium">-</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Engagement</p>
+            <p id="engagement" class="text-gray-900 font-medium">-</p>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <p class="text-gray-500 text-sm mb-1">Key Topics</p>
+          <div id="keyTopics" class="flex flex-wrap gap-2">
+            <span class="px-2 py-1 rounded-full bg-gray-100 text-gray-800 text-sm">No topics detected</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const startCallBtn = document.getElementById('startCallBtn');
+    const endCallBtn = document.getElementById('endCallBtn');
+    const viewCallLogBtn = document.getElementById('viewCallLogBtn');
+    const callStatus = document.getElementById('callStatus');
+    const callTimer = document.getElementById('callTimer');
+    const conversationContainer = document.getElementById('conversationContainer');
+    const userInputContainer = document.getElementById('userInputContainer');
+    const callControls = document.getElementById('callControls');
+    const userInput = document.getElementById('userInput');
+    const sendTextBtn = document.getElementById('sendTextBtn');
+    const startRecordingBtn = document.getElementById('startRecordingBtn');
+    const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+    const recordingStatus = document.getElementById('recordingStatus');
+    const recordingTime = document.getElementById('recordingTime');
+    
+    // Analytics elements
+    const detectedLanguage = document.getElementById('detectedLanguage');
+    const sentiment = document.getElementById('sentiment');
+    const engagement = document.getElementById('engagement');
+    const keyTopics = document.getElementById('keyTopics');
+    
+    // Call state
+    let callActive = false;
+    let callStartTime = null;
+    let timerInterval = null;
+    let recordingInterval = null;
+    let recordingStartTime = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    
+    // Start call
+    startCallBtn.addEventListener('click', function() {
+      // Get call configuration
+      const voiceModel = document.getElementById('voiceModel').value;
+      const language = document.getElementById('language').value;
+      const initialMessage = document.getElementById('initialMessage').value;
+      const recordCall = document.getElementById('recordCall').checked;
+      
+      // Update UI
+      startCallBtn.disabled = true;
+      startCallBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Connecting...';
+      
+      // Simulate API call to start call
+      setTimeout(function() {
+        // Update call status
+        callStatus.innerHTML = `
+          <div class="flex items-center">
+            <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-500 mr-3">
+              <i class="fas fa-phone-alt"></i>
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">Call in progress</p>
+              <p class="text-sm text-gray-500">Connected to ${voiceModel}</p>
+            </div>
+          </div>
+        `;
+        
+        // Show call timer
+        callTimer.classList.remove('hidden');
+        callStartTime = new Date();
+        timerInterval = setInterval(updateCallTimer, 1000);
+        
+        // Show end call button
+        endCallBtn.classList.remove('hidden');
+        
+        // Clear conversation container
+        conversationContainer.innerHTML = '';
+        
+        // Add initial message
+        addMessage('system', initialMessage);
+        
+        // Show user input and call controls
+        userInputContainer.classList.remove('hidden');
+        callControls.classList.remove('hidden');
+        
+        // Set call as active
+        callActive = true;
+        
+        // Update analytics
+        updateAnalytics(language, 'neutral', 'medium');
+      }, 2000);
+    });
+    
+    // End call
+    endCallBtn.addEventListener('click', function() {
+      if (!callActive) return;
+      
+      // Confirm end call
+      if (!confirm('Are you sure you want to end this call?')) return;
+      
+      // Update UI
+      endCallBtn.disabled = true;
+      endCallBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Ending call...';
+      
+      // Simulate API call to end call
+      setTimeout(function() {
+        // Update call status
+        callStatus.innerHTML = `
+          <div class="flex items-center">
+            <div class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 mr-3">
+              <i class="fas fa-phone-slash"></i>
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">Call ended</p>
+              <p class="text-sm text-gray-500">Duration: ${formatTime((new Date() - callStartTime) / 1000)}</p>
+            </div>
+          </div>
+        `;
+        
+        // Stop timer
+        clearInterval(timerInterval);
+        
+        // Hide end call button and show view call log button
+        endCallBtn.classList.add('hidden');
+        viewCallLogBtn.classList.remove('hidden');
+        
+        // Hide user input and call controls
+        userInputContainer.classList.add('hidden');
+        callControls.classList.add('hidden');
+        
+        // Add end message
+        addMessage('system', 'Thank you for your time. The call has ended.');
+        
+        // Set call as inactive
+        callActive = false;
+      }, 1000);
+    });
+    
+    // Send text message
+    sendTextBtn.addEventListener('click', sendUserMessage);
+    userInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendUserMessage();
+      }
+    });
+    
+    // Start recording
+    startRecordingBtn.addEventListener('click', function() {
+      if (!callActive) return;
+      
+      // Check if browser supports getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Your browser does not support audio recording');
+        return;
+      }
+      
+      // Request audio permission
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+          // Create media recorder
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+          
+          // Handle data available event
+          mediaRecorder.addEventListener('dataavailable', function(e) {
+            audioChunks.push(e.data);
+          });
+          
+          // Handle stop event
+          mediaRecorder.addEventListener('stop', function() {
+            // Create audio blob
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            
+            // Simulate sending audio to server
+            setTimeout(function() {
+              // Add user message
+              addMessage('user', '[Audio Message]');
+              
+              // Simulate AI response
+              simulateAIResponse();
+              
+              // Hide recording status
+              recordingStatus.classList.add('hidden');
+              clearInterval(recordingInterval);
+            }, 1000);
+          });
+          
+          // Start recording
+          mediaRecorder.start();
+          recordingStartTime = new Date();
+          recordingInterval = setInterval(updateRecordingTime, 100);
+          
+          // Update UI
+          startRecordingBtn.classList.add('hidden');
+          stopRecordingBtn.classList.remove('hidden');
+          recordingStatus.classList.remove('hidden');
+        })
+        .catch(function(err) {
+          alert('Error accessing microphone: ' + err.message);
+        });
+    });
+    
+    // Stop recording
+    stopRecordingBtn.addEventListener('click', function() {
+      if (!mediaRecorder) return;
+      
+      // Stop recording
+      mediaRecorder.stop();
+      
+      // Update UI
+      startRecordingBtn.classList.remove('hidden');
+      stopRecordingBtn.classList.add('hidden');
+    });
+    
+    // Helper functions
+    function sendUserMessage() {
+      if (!callActive) return;
+      
+      const message = userInput.value.trim();
+      if (!message) return;
+      
+      // Add user message
+      addMessage('user', message);
+      
+      // Clear input
+      userInput.value = '';
+      
+      // Simulate AI response
+      simulateAIResponse();
+    }
+    
+    function addMessage(sender, message) {
+      const messageEl = document.createElement('div');
+      messageEl.className = 'mb-4';
+      
+      if (sender === 'user') {
+        messageEl.innerHTML = `
+          <div class="flex justify-end">
+            <div class="bg-indigo-100 rounded-lg p-3 max-w-xs md:max-w-md">
+              <p class="text-gray-800">${message}</p>
+            </div>
+          </div>
+        `;
+      } else {
+        messageEl.innerHTML = `
+          <div class="flex">
+            <div class="bg-white rounded-lg p-3 max-w-xs md:max-w-md shadow">
+              <p class="text-gray-800">${message}</p>
+            </div>
+          </div>
+        `;
+      }
+      
+      conversationContainer.appendChild(messageEl);
+      conversationContainer.scrollTop = conversationContainer.scrollHeight;
+    }
+    
+    function simulateAIResponse() {
+      // Sample responses
+      const responses = [
+        "Thank you for sharing that. How do you feel about the current state of healthcare in your community?",
+        "I understand your concerns. What specific improvements would you like to see in education?",
+        "That's an interesting perspective. Could you tell me more about your thoughts on economic development?",
+        "I appreciate your feedback. Is there anything else you'd like to discuss about the campaign?",
+        "Thank you for your support. What issues matter most to you and your family?"
+      ];
+      
+      // Randomly select a response
+      const response = responses[Math.floor(Math.random() * responses.length)];
+      
+      // Simulate typing delay
+      setTimeout(function() {
+        addMessage('system', response);
+        
+        // Update analytics with random values
+        const sentiments = ['positive', 'neutral', 'negative'];
+        const engagements = ['low', 'medium', 'high'];
+        const languages = ['English', 'Swahili', 'Luganda', 'Runyankole'];
+        
+        updateAnalytics(
+          languages[Math.floor(Math.random() * languages.length)],
+          sentiments[Math.floor(Math.random() * sentiments.length)],
+          engagements[Math.floor(Math.random() * engagements.length)]
+        );
+      }, 1500);
+    }
+    
+    function updateCallTimer() {
+      if (!callStartTime) return;
+      
+      const elapsedSeconds = Math.floor((new Date() - callStartTime) / 1000);
+      callTimer.querySelector('p.text-2xl').textContent = formatTime(elapsedSeconds);
+    }
+    
+    function updateRecordingTime() {
+      if (!recordingStartTime) return;
+      
+      const elapsedSeconds = Math.floor((new Date() - recordingStartTime) / 1000);
+      recordingTime.textContent = formatTime(elapsedSeconds);
+    }
+    
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60);
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    
+    function updateAnalytics(language, sentimentValue, engagementValue) {
+      // Update detected language
+      detectedLanguage.textContent = language;
+      
+      // Update sentiment
+      sentiment.textContent = sentimentValue.charAt(0).toUpperCase() + sentimentValue.slice(1);
+      sentiment.className = 'text-gray-900 font-medium';
+      
+      if (sentimentValue === 'positive') {
+        sentiment.innerHTML = '<span class="px-2 py-1 rounded-full bg-green-100 text-green-800">Positive</span>';
+      } else if (sentimentValue === 'negative') {
+        sentiment.innerHTML = '<span class="px-2 py-1 rounded-full bg-red-100 text-red-800">Negative</span>';
+      } else {
+        sentiment.innerHTML = '<span class="px-2 py-1 rounded-full bg-blue-100 text-blue-800">Neutral</span>';
+      }
+      
+      // Update engagement
+      engagement.textContent = engagementValue.charAt(0).toUpperCase() + engagementValue.slice(1);
+      
+      // Update key topics (randomly)
+      const topics = ['Healthcare', 'Education', 'Economy', 'Infrastructure', 'Security', 'Jobs', 'Corruption', 'Water', 'Electricity'];
+      const selectedTopics = [];
+      
+      // Randomly select 2-4 topics
+      const numTopics = Math.floor(Math.random() * 3) + 2;
+      
+      for (let i = 0; i < numTopics; i++) {
+        const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+        if (!selectedTopics.includes(randomTopic)) {
+          selectedTopics.push(randomTopic);
+        }
+      }
+      
+      // Update topics display
+      keyTopics.innerHTML = '';
+      selectedTopics.forEach(topic => {
+        const topicEl = document.createElement('span');
+        topicEl.className = 'px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 text-sm';
+        topicEl.textContent = topic;
+        keyTopics.appendChild(topicEl);
+      });
+    }
+  });
+</script>
+{% endblock %}

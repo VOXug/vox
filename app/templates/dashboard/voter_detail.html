@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Voter Detail - VOX{% endblock %}
+
+{% block heading %}Voter Detail{% endblock %}
+
+{% block content %}
+<!-- Voter Header -->
+<div class="flex justify-between items-center mb-6">
+  <div class="flex items-center">
+    <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 mr-4">
+      <i class="fas fa-user text-2xl"></i>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold">{{ voter.name or 'Unknown Voter' }}</h2>
+      <p class="text-gray-500">{{ voter.phone_number }}</p>
+    </div>
+  </div>
+  
+  <div class="flex space-x-2">
+    <a href="{{ url_for('dashboard.edit_voter', voter_id=voter.id) }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-edit mr-1"></i> Edit
+    </a>
+    <a href="{{ url_for('dashboard.view_voter_list', list_id=voter.list_id) }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to List
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Voter Information -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Voter Information</h3>
+      
+      <div class="p-6">
+        <div class="space-y-4">
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Name</p>
+            <p class="text-gray-900 font-medium">{{ voter.name or 'Not provided' }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Phone Number</p>
+            <p class="text-gray-900 font-medium">{{ voter.phone_number }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Location</p>
+            <p class="text-gray-900 font-medium">{{ voter.location or 'Not provided' }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Preferred Language</p>
+            <p class="text-gray-900 font-medium">
+              {% if voter.language_preference == 'en' %}English
+              {% elif voter.language_preference == 'sw' %}Swahili
+              {% elif voter.language_preference == 'lg' %}Luganda
+              {% elif voter.language_preference == 'ny' %}Runyankole
+              {% else %}{{ voter.language_preference or 'Not specified' }}
+              {% endif %}
+            </p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">List</p>
+            <p class="text-gray-900 font-medium">{{ voter_list.name }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Added On</p>
+            <p class="text-gray-900 font-medium">{{ voter.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Do Not Call</p>
+            <div class="flex items-center">
+              {% if voter.do_not_call %}
+              <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 mr-2">
+                Yes
+              </span>
+              {% else %}
+              <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 mr-2">
+                No
+              </span>
+              {% endif %}
+              
+              <form method="POST" action="{{ url_for('dashboard.toggle_do_not_call', voter_id=voter.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="text-sm text-indigo-600 hover:text-indigo-900">
+                  {% if voter.do_not_call %}Remove flag{% else %}Add flag{% endif %}
+                </button>
+              </form>
+            </div>
+          </div>
+          
+          {% if voter.notes %}
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Notes</p>
+            <p class="text-gray-900">{{ voter.notes }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tags -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Tags</h3>
+      
+      <div class="p-6">
+        {% if voter.tags %}
+        <div class="flex flex-wrap gap-2 mb-4">
+          {% for tag in voter.tags.split(',') %}
+          <span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-sm">
+            {{ tag.strip() }}
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500">No tags added yet</p>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('dashboard.add_voter_tag', voter_id=voter.id) }}" class="mt-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="flex">
+            <input type="text" name="tag" class="flex-grow px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Add a tag...">
+            <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-r-lg hover:bg-indigo-700 transition duration-200">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Call History -->
+  <div class="lg:col-span-2">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-bold">Call History</h3>
+        
+        <div>
+          <a href="{{ url_for('dashboard.make_test_call', voter_id=voter.id) }}" class="text-indigo-600 hover:text-indigo-900">
+            <i class="fas fa-phone mr-1"></i> Make Test Call
+          </a>
+        </div>
+      </div>
+      
+      {% if call_logs %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campaign</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentiment</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Language</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for call in call_logs %}
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">{{ call.created_at.strftime('%Y-%m-%d') }}</div>
+                <div class="text-sm text-gray-500">{{ call.created_at.strftime('%H:%M:%S') }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">{{ call.campaign.name }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">{{ call.duration|default('N/A') }} seconds</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                  {% if call.status == 'completed' %}bg-green-100 text-green-800
+                  {% elif call.status in ['failed', 'busy', 'no-answer'] %}bg-red-100 text-red-800
+                  {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                  {{ call.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% if call.sentiment %}
+                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                  {% if call.sentiment == 'positive' %}bg-green-100 text-green-800
+                  {% elif call.sentiment == 'negative' %}bg-red-100 text-red-800
+                  {% else %}bg-blue-100 text-blue-800{% endif %}">
+                  {{ call.sentiment|title }}
+                </span>
+                {% else %}
+                <span class="text-sm text-gray-500">N/A</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% if call.language_used %}
+                <span class="text-sm text-gray-900">
+                  {% if call.language_used == 'en' %}English
+                  {% elif call.language_used == 'sw' %}Swahili
+                  {% elif call.language_used == 'lg' %}Luganda
+                  {% elif call.language_used == 'ny' %}Runyankole
+                  {% else %}{{ call.language_used }}
+                  {% endif %}
+                </span>
+                {% else %}
+                <span class="text-sm text-gray-500">N/A</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <a href="{{ url_for('dashboard.call_detail', call_id=call.id) }}" class="text-indigo-600 hover:text-indigo-900">
+                  <i class="fas fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination -->
+      {% if pagination.pages > 1 %}
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <nav class="flex items-center justify-between">
+          <div class="flex-1 flex justify-between sm:hidden">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id, page=pagination.prev_num) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              Previous
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-gray-100 cursor-not-allowed">
+              Previous
+            </span>
+            {% endif %}
+            
+            {% if pagination.has_next %}
+            <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id, page=pagination.next_num) }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              Next
+            </a>
+            {% else %}
+            <span class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-gray-100 cursor-not-allowed">
+              Next
+            </span>
+            {% endif %}
+          </div>
+          
+          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p class="text-sm text-gray-700">
+                Showing <span class="font-medium">{{ pagination.page * pagination.per_page - pagination.per_page + 1 }}</span> to <span class="font-medium">{{ min(pagination.page * pagination.per_page, pagination.total) }}</span> of <span class="font-medium">{{ pagination.total }}</span> results
+              </p>
+            </div>
+            
+            <div>
+              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id, page=pagination.prev_num) }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                  <span class="sr-only">Previous</span>
+                  <i class="fas fa-chevron-left"></i>
+                </a>
+                {% else %}
+                <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+                  <span class="sr-only">Previous</span>
+                  <i class="fas fa-chevron-left"></i>
+                </span>
+                {% endif %}
+                
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                  {% if page_num %}
+                    {% if page_num == pagination.page %}
+                    <span class="relative inline-flex items-center px-4 py-2 border border-indigo-500 bg-indigo-50 text-sm font-medium text-indigo-600">
+                      {{ page_num }}
+                    </span>
+                    {% else %}
+                    <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id, page=page_num) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                      {{ page_num }}
+                    </a>
+                    {% endif %}
+                  {% else %}
+                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                      ...
+                    </span>
+                  {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id, page=pagination.next_num) }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                  <span class="sr-only">Next</span>
+                  <i class="fas fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+                  <span class="sr-only">Next</span>
+                  <i class="fas fa-chevron-right"></i>
+                </span>
+                {% endif %}
+              </nav>
+            </div>
+          </div>
+        </nav>
+      </div>
+      {% endif %}
+      
+      {% else %}
+      <div class="text-center py-12">
+        <div class="text-indigo-500 mb-4">
+          <i class="fas fa-phone-slash text-6xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No call history</h3>
+        <p class="text-gray-500 mb-6">This voter has not been called yet</p>
+      </div>
+      {% endif %}
+    </div>
+    
+    <!-- Voter Insights -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Voter Insights</h3>
+      
+      <div class="p-6">
+        {% if insights %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Sentiment Trend -->
+          <div>
+            <h4 class="font-medium text-gray-900 mb-3">Sentiment Trend</h4>
+            <canvas id="sentimentChart" height="200"></canvas>
+          </div>
+          
+          <!-- Language Usage -->
+          <div>
+            <h4 class="font-medium text-gray-900 mb-3">Language Usage</h4>
+            <canvas id="languageChart" height="200"></canvas>
+          </div>
+        </div>
+        
+        <!-- Key Topics -->
+        <div class="mt-6">
+          <h4 class="font-medium text-gray-900 mb-3">Key Topics Discussed</h4>
+          
+          <div class="flex flex-wrap gap-2">
+            {% for topic in insights.topics %}
+            <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-sm">
+              {{ topic.name }} ({{ topic.count }})
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        
+        <!-- Engagement Score -->
+        <div class="mt-6">
+          <h4 class="font-medium text-gray-900 mb-3">Engagement Score</h4>
+          
+          <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {{ insights.engagement_score }}%"></div>
+          </div>
+          
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>Low</span>
+            <span>Medium</span>
+            <span>High</span>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center py-6">
+          <p class="text-gray-500">Not enough data to generate insights</p>
+          <p class="text-sm text-gray-400 mt-2">Insights will be available after multiple calls</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if insights %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Sentiment Trend Chart
+    const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+    new Chart(sentimentCtx, {
+      type: 'line',
+      data: {
+        labels: {{ insights.sentiment_trend.labels|tojson|safe }},
+        datasets: [{
+          label: 'Sentiment Score',
+          data: {{ insights.sentiment_trend.data|tojson|safe }},
+          backgroundColor: 'rgba(79, 70, 229, 0.2)',
+          borderColor: 'rgba(79, 70, 229, 1)',
+          borderWidth: 2,
+          tension: 0.3,
+          pointBackgroundColor: 'rgba(79, 70, 229, 1)'
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: {
+              callback: function(value) {
+                if (value === 0) return 'Negative';
+                if (value === 50) return 'Neutral';
+                if (value === 100) return 'Positive';
+                return '';
+              }
+            }
+          }
+        },
+        responsive: true,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+    
+    // Language Usage Chart
+    const languageCtx = document.getElementById('languageChart').getContext('2d');
+    new Chart(languageCtx, {
+      type: 'pie',
+      data: {
+        labels: {{ insights.language_usage.labels|tojson|safe }},
+        datasets: [{
+          data: {{ insights.language_usage.data|tojson|safe }},
+          backgroundColor: [
+            'rgba(66, 153, 225, 0.7)',
+            'rgba(72, 187, 120, 0.7)',
+            'rgba(237, 137, 54, 0.7)',
+            'rgba(159, 122, 234, 0.7)'
+          ],
+          borderColor: [
+            'rgba(66, 153, 225, 1)',
+            'rgba(72, 187, 120, 1)',
+            'rgba(237, 137, 54, 1)',
+            'rgba(159, 122, 234, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

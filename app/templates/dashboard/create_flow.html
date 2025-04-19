@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Create Conversation Flow - VOX{% endblock %}
+
+{% block heading %}Create Conversation Flow{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+  <div>
+    <h2 class="text-xl font-bold">Create New Flow</h2>
+    <p class="text-gray-500">Design a new conversation path for your campaign</p>
+  </div>
+  
+  <div>
+    <a href="{{ url_for('dashboard.conversation_flows') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to Flows
+    </a>
+  </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-6">
+    <form method="POST" action="{{ url_for('dashboard.create_flow') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="name" class="block text-gray-700 font-medium mb-2">Flow Name <span class="text-red-500">*</span></label>
+          <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+        
+        <div>
+          <label for="campaign_id" class="block text-gray-700 font-medium mb-2">Campaign (Optional)</label>
+          <select id="campaign_id" name="campaign_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">-- Select Campaign --</option>
+            {% for campaign in campaigns %}
+            <option value="{{ campaign.id }}">{{ campaign.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="md:col-span-2">
+          <label for="description" class="block text-gray-700 font-medium mb-2">Description</label>
+          <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+        
+        <div>
+          <label class="block text-gray-700 font-medium mb-2">Supported Languages</label>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex items-center">
+              <input type="checkbox" id="lang_en" name="languages" value="en" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="lang_en" class="ml-2 block text-gray-700">
+                English
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="lang_sw" name="languages" value="sw" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="lang_sw" class="ml-2 block text-gray-700">
+                Swahili
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="lang_lg" name="languages" value="lg" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="lang_lg" class="ml-2 block text-gray-700">
+                Luganda
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="lang_ny" name="languages" value="ny" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="lang_ny" class="ml-2 block text-gray-700">
+                Runyankole
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-gray-700 font-medium mb-2">Flow Options</label>
+          <div class="space-y-2">
+            <div class="flex items-center">
+              <input type="checkbox" id="is_active" name="is_active" value="1" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="is_active" class="ml-2 block text-gray-700">
+                Make Active Immediately
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="is_default" name="is_default" value="1" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="is_default" class="ml-2 block text-gray-700">
+                Set as Default Flow
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 flex justify-end">
+        <a href="{{ url_for('dashboard.conversation_flows') }}" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+          Cancel
+        </a>
+        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+          Create & Open Editor
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Flow Templates -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Or Start from a Template</h3>
+  
+  <div class="p-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Voter Introduction Template -->
+      <div class="border rounded-lg overflow-hidden hover:shadow-md transition duration-200">
+        <div class="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white">
+          <i class="fas fa-handshake text-5xl"></i>
+        </div>
+        <div class="p-4">
+          <h4 class="font-medium text-gray-900 mb-2">Voter Introduction</h4>
+          <p class="text-gray-500 text-sm mb-4">A simple introduction flow to greet voters and introduce the candidate</p>
+          <button type="button" class="use-template-btn text-indigo-600 hover:text-indigo-900 text-sm font-medium" data-template="introduction">
+            Use Template <i class="fas fa-arrow-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Issue Survey Template -->
+      <div class="border rounded-lg overflow-hidden hover:shadow-md transition duration-200">
+        <div class="h-32 bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center text-white">
+          <i class="fas fa-clipboard-list text-5xl"></i>
+        </div>
+        <div class="p-4">
+          <h4 class="font-medium text-gray-900 mb-2">Issue Survey</h4>
+          <p class="text-gray-500 text-sm mb-4">Gather voter opinions on key campaign issues and policy positions</p>
+          <button type="button" class="use-template-btn text-indigo-600 hover:text-indigo-900 text-sm font-medium" data-template="survey">
+            Use Template <i class="fas fa-arrow-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Event Invitation Template -->
+      <div class="border rounded-lg overflow-hidden hover:shadow-md transition duration-200">
+        <div class="h-32 bg-gradient-to-r from-yellow-500 to-orange-600 flex items-center justify-center text-white">
+          <i class="fas fa-calendar-alt text-5xl"></i>
+        </div>
+        <div class="p-4">
+          <h4 class="font-medium text-gray-900 mb-2">Event Invitation</h4>
+          <p class="text-gray-500 text-sm mb-4">Invite voters to campaign events and rallies with RSVP handling</p>
+          <button type="button" class="use-template-btn text-indigo-600 hover:text-indigo-900 text-sm font-medium" data-template="event">
+            Use Template <i class="fas fa-arrow-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template Modal -->
+<div id="templateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
+    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+      <h3 class="text-lg font-bold">Use Template</h3>
+      <button id="closeTemplateModal" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <form id="templateForm" method="POST" action="{{ url_for('dashboard.create_flow_from_template') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="templateType" name="template" value="">
+        
+        <div class="mb-4">
+          <label for="templateName" class="block text-gray-700 font-medium mb-2">Flow Name <span class="text-red-500">*</span></label>
+          <input type="text" id="templateName" name="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+        
+        <div class="mb-4">
+          <label for="templateCampaign" class="block text-gray-700 font-medium mb-2">Campaign (Optional)</label>
+          <select id="templateCampaign" name="campaign_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">-- Select Campaign --</option>
+            {% for campaign in campaigns %}
+            <option value="{{ campaign.id }}">{{ campaign.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div id="templateDescription" class="mb-4 p-4 bg-gray-50 rounded-lg">
+          <h4 class="font-medium text-gray-900 mb-2">Template Description</h4>
+          <p class="text-gray-500 text-sm template-description"></p>
+        </div>
+        
+        <div class="flex justify-end">
+          <button type="button" id="cancelTemplate" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+            Cancel
+          </button>
+          <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            Create & Open Editor
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Template modal
+    const templateModal = document.getElementById('templateModal');
+    const templateButtons = document.querySelectorAll('.use-template-btn');
+    const closeTemplateModal = document.getElementById('closeTemplateModal');
+    const cancelTemplate = document.getElementById('cancelTemplate');
+    const templateForm = document.getElementById('templateForm');
+    const templateType = document.getElementById('templateType');
+    const templateDescription = document.querySelector('.template-description');
+    
+    // Template descriptions
+    const templateDescriptions = {
+      'introduction': 'This template creates a basic introduction flow with a greeting, candidate introduction, and key platform points. It includes branches for different voter responses and language detection.',
+      'survey': 'This template creates a survey flow that asks voters about their opinions on key issues like healthcare, education, and the economy. It includes sentiment analysis and follow-up questions based on responses.',
+      'event': 'This template creates an event invitation flow that informs voters about upcoming campaign events, collects RSVPs, and provides event details. It includes confirmation and reminder messages.'
+    };
+    
+    function showTemplateModal(template) {
+      templateType.value = template;
+      templateDescription.textContent = templateDescriptions[template] || '';
+      
+      // Set a default name based on the template
+      const templateName = document.getElementById('templateName');
+      if (template === 'introduction') {
+        templateName.value = 'Voter Introduction';
+      } else if (template === 'survey') {
+        templateName.value = 'Issue Survey';
+      } else if (template === 'event') {
+        templateName.value = 'Event Invitation';
+      }
+      
+      templateModal.classList.remove('hidden');
+    }
+    
+    function hideTemplateModal() {
+      templateModal.classList.add('hidden');
+    }
+    
+    templateButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const template = this.dataset.template;
+        showTemplateModal(template);
+      });
+    });
+    
+    closeTemplateModal.addEventListener('click', hideTemplateModal);
+    cancelTemplate.addEventListener('click', hideTemplateModal);
+    
+    // Form validation
+    const mainForm = document.querySelector('form');
+    mainForm.addEventListener('submit', function(e) {
+      const nameInput = document.getElementById('name');
+      if (!nameInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter a flow name');
+        nameInput.focus();
+      }
+    });
+    
+    templateForm.addEventListener('submit', function(e) {
+      const nameInput = document.getElementById('templateName');
+      if (!nameInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter a flow name');
+        nameInput.focus();
+      }
+    });
+  });
+</script>
+{% endblock %}

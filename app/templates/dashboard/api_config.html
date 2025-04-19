@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block title %}API Configuration - VOX{% endblock %}
+
+{% block heading %}API Configuration{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="flex justify-between items-center mb-6">
+  <div>
+    <h2 class="text-xl font-bold">API Configuration</h2>
+    <p class="text-gray-500">Manage API credentials for voice and AI services</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Twilio Configuration -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="p-4 border-b border-gray-200 flex items-center">
+        <img src="https://www.twilio.com/assets/icons/twilio-icon-512-e0a91d9b.png" alt="Twilio Logo" class="h-8 w-8 mr-3">
+        <h3 class="text-lg font-bold">Twilio Configuration</h3>
+      </div>
+      
+      <div class="p-6">
+        <form method="POST" action="{{ url_for('dashboard.update_twilio_config') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="mb-4">
+            <label for="twilio_account_sid" class="block text-gray-700 font-medium mb-2">Account SID</label>
+            <input type="text" id="twilio_account_sid" name="twilio_account_sid" value="{{ config.twilio_account_sid }}" 
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+          </div>
+          
+          <div class="mb-4">
+            <label for="twilio_auth_token" class="block text-gray-700 font-medium mb-2">Auth Token</label>
+            <div class="relative">
+              <input type="password" id="twilio_auth_token" name="twilio_auth_token" value="{{ config.twilio_auth_token }}" 
+                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+              <button type="button" class="toggle-password absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label for="twilio_phone_number" class="block text-gray-700 font-medium mb-2">Phone Number</label>
+            <input type="text" id="twilio_phone_number" name="twilio_phone_number" value="{{ config.twilio_phone_number }}" 
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                   placeholder="+1234567890" required>
+            <p class="text-sm text-gray-500 mt-1">Must be in E.164 format (e.g., +1234567890)</p>
+          </div>
+          
+          <div class="mb-4">
+            <label for="twilio_webhook_url" class="block text-gray-700 font-medium mb-2">Webhook URL</label>
+            <div class="flex">
+              <input type="text" id="twilio_webhook_url" value="{{ webhook_url }}" 
+                     class="w-full px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" readonly>
+              <button type="button" id="copyWebhookBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-r-lg hover:bg-gray-300">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-1">Configure this URL in your Twilio phone number settings</p>
+          </div>
+          
+          <div class="mt-6">
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              Save Twilio Configuration
+            </button>
+          </div>
+        </form>
+        
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <button type="button" id="testTwilioBtn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-phone-alt mr-2"></i> Test Twilio Connection
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- OpenAI Configuration -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="p-4 border-b border-gray-200 flex items-center">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/1024px-OpenAI_Logo.svg.png" alt="OpenAI Logo" class="h-8 w-8 mr-3">
+        <h3 class="text-lg font-bold">OpenAI Configuration</h3>
+      </div>
+      
+      <div class="p-6">
+        <form method="POST" action="{{ url_for('dashboard.update_openai_config') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="mb-4">
+            <label for="openai_api_key" class="block text-gray-700 font-medium mb-2">API Key</label>
+            <div class="relative">
+              <input type="password" id="openai_api_key" name="openai_api_key" value="{{ config.openai_api_key }}" 
+                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+              <button type="button" class="toggle-password absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label for="openai_model" class="block text-gray-700 font-medium mb-2">Default Model</label>
+            <select id="openai_model" name="openai_model" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="gpt-4" {% if config.openai_model == 'gpt-4' %}selected{% endif %}>GPT-4</option>
+              <option value="gpt-4-turbo" {% if config.openai_model == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
+              <option value="gpt-3.5-turbo" {% if config.openai_model == 'gpt-3.5-turbo' %}selected{% endif %}>GPT-3.5 Turbo</option>
+            </select>
+          </div>
+          
+          <div class="mb-4">
+            <label for="openai_temperature" class="block text-gray-700 font-medium mb-2">Temperature</label>
+            <input type="range" id="openai_temperature" name="openai_temperature" min="0" max="1" step="0.1" 
+                   value="{{ config.openai_temperature|default(0.7) }}" 
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Precise (0.0)</span>
+              <span id="temperatureValue">{{ config.openai_temperature|default(0.7) }}</span>
+              <span>Creative (1.0)</span>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label for="openai_max_tokens" class="block text-gray-700 font-medium mb-2">Max Tokens</label>
+            <input type="number" id="openai_max_tokens" name="openai_max_tokens" value="{{ config.openai_max_tokens|default(1024) }}" 
+                   min="100" max="8192" 
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="text-sm text-gray-500 mt-1">Maximum length of generated responses</p>
+          </div>
+          
+          <div class="mt-6">
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              Save OpenAI Configuration
+            </button>
+          </div>
+        </form>
+        
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <button type="button" id="testOpenAIBtn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-robot mr-2"></i> Test OpenAI Connection
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Voice Model Configuration -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="p-4 border-b border-gray-200 flex items-center">
+        <i class="fas fa-microphone text-indigo-500 text-xl mr-3"></i>
+        <h3 class="text-lg font-bold">Voice Models</h3>
+      </div>
+      
+      <div class="p-6">
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-medium text-gray-900">Available Voice Models</h4>
+            <button type="button" id="addVoiceModelBtn" class="text-indigo-600 hover:text-indigo-900">
+              <i class="fas fa-plus-circle"></i> Add New
+            </button>
+          </div>
+          
+          {% if voice_models %}
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            {% for model in voice_models %}
+            <div class="p-3 border rounded-lg hover:bg-gray-50">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h5 class="font-medium text-gray-900">{{ model.name }}</h5>
+                  <p class="text-sm text-gray-500">{{ model.language_name }} ({{ model.language }})</p>
+                </div>
+                <div>
+                  <button type="button" class="edit-voice-model text-indigo-600 hover:text-indigo-900 mr-2" data-id="{{ model.id }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="delete-voice-model text-red-600 hover:text-red-900" data-id="{{ model.id }}">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="mt-2 text-sm text-gray-700">
+                <p>Provider: {{ model.provider }}</p>
+                <p>Model ID: {{ model.model_id }}</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-6 border rounded-lg">
+            <p class="text-gray-500">No voice models configured</p>
+            <button type="button" id="addFirstVoiceModelBtn" class="text-indigo-600 hover:text-indigo-900 mt-2">
+              Add your first voice model
+            </button>
+          </div>
+          {% endif %}
+        </div>
+        
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <h4 class="font-medium text-gray-900 mb-3">Voice Model Providers</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3 border rounded-lg">
+              <div class="flex items-center">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/1024px-OpenAI_Logo.svg.png" alt="OpenAI Logo" class="h-6 w-6 mr-2">
+                <span class="text-gray-900">OpenAI TTS</span>
+              </div>
+              <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Connected</span>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 border rounded-lg">
+              <div class="flex items-center">
+                <img src="https://elevenlabs.io/favicon.ico" alt="ElevenLabs Logo" class="h-6 w-6 mr-2">
+                <span class="text-gray-900">ElevenLabs</span>
+              </div>
+              <button type="button" class="text-indigo-600 hover:text-indigo-900 text-sm">
+                Connect
+              </button>
+            </div>
+            
+            <div class="flex items-center justify-between p-3 border rounded-lg">
+              <div class="flex items-center">
+                <img src="https://play-lh.googleusercontent.com/0zL4G16HnBwrY6RuBWi3mXw5Y5D7lHLtUd_dHHZ5I85BW8gMQoZXUoKiQFMkjWnX5A" alt="Google Cloud Logo" class="h-6 w-6 mr-2">
+                <span class="text-gray-900">Google Cloud TTS</span>
+              </div>
+              <button type="button" class="text-indigo-600 hover:text-indigo-900 text-sm">
+                Connect
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Voice Model Modal -->
+<div id="voiceModelModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 id="modalTitle" class="text-lg font-bold">Add Voice Model</h3>
+    </div>
+    
+    <div class="p-6">
+      <form id="voiceModelForm" method="POST" action="{{ url_for('dashboard.add_voice_model') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="voice_model_id" name="id" value="">
+        
+        <div class="mb-4">
+          <label for="voice_name" class="block text-gray-700 font-medium mb-2">Voice Name</label>
+          <input type="text" id="voice_name" name="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+        
+        <div class="mb-4">
+          <label for="voice_provider" class="block text-gray-700 font-medium mb-2">Provider</label>
+          <select id="voice_provider" name="provider" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="openai">OpenAI TTS</option>
+            <option value="elevenlabs">ElevenLabs</option>
+            <option value="google">Google Cloud TTS</option>
+          </select>
+        </div>
+        
+        <div class="mb-4">
+          <label for="voice_model_id_input" class="block text-gray-700 font-medium mb-2">Model ID</label>
+          <input type="text" id="voice_model_id_input" name="model_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+          <p class="text-sm text-gray-500 mt-1">e.g., "nova", "alloy", "shimmer" for OpenAI</p>
+        </div>
+        
+        <div class="mb-4">
+          <label for="voice_language" class="block text-gray-700 font-medium mb-2">Language</label>
+          <select id="voice_language" name="language" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="en">English</option>
+            <option value="sw">Swahili</option>
+            <option value="lg">Luganda</option>
+            <option value="ny">Runyankole</option>
+          </select>
+        </div>
+        
+        <div class="mb-4">
+          <label for="voice_gender" class="block text-gray-700 font-medium mb-2">Gender</label>
+          <select id="voice_gender" name="gender" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="neutral">Neutral</option>
+          </select>
+        </div>
+        
+        <div class="flex justify-end">
+          <button type="button" id="cancelVoiceModel" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+            Cancel
+          </button>
+          <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            Save Voice Model
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Test Connection Modal -->
+<div id="testConnectionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 id="testModalTitle" class="text-lg font-bold">Test Connection</h3>
+    </div>
+    
+    <div class="p-6">
+      <div id="testLoading" class="text-center py-6">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p class="text-gray-700">Testing connection...</p>
+      </div>
+      
+      <div id="testSuccess" class="hidden text-center py-6">
+        <div class="bg-green-100 text-green-800 rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-check text-xl"></i>
+        </div>
+        <p class="text-gray-700 mb-2">Connection successful!</p>
+        <p id="testSuccessMessage" class="text-sm text-gray-500"></p>
+      </div>
+      
+      <div id="testError" class="hidden text-center py-6">
+        <div class="bg-red-100 text-red-800 rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-times text-xl"></i>
+        </div>
+        <p class="text-gray-700 mb-2">Connection failed</p>
+        <p id="testErrorMessage" class="text-sm text-gray-500"></p>
+      </div>
+      
+      <div class="flex justify-end mt-4">
+        <button type="button" id="closeTestModal" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Confirm Deletion</h3>
+    </div>
+    
+    <div class="p-6">
+      <p class="text-gray-700 mb-6">Are you sure you want to delete this voice model? This action cannot be undone.</p>
+      
+      <div class="flex justify-end">
+        <button type="button" id="cancelDelete" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+          Cancel
+        </button>
+        <form id="deleteVoiceModelForm" method="POST" action="{{ url_for('dashboard.delete_voice_model') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" id="delete_model_id" name="id" value="">
+          <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-password').forEach(button => {
+      button.addEventListener('click', function() {
+        const input = this.previousElementSibling;
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        
+        // Toggle icon
+        const icon = this.querySelector('i');
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+      });
+    });
+    
+    // Copy webhook URL
+    document.getElementById('copyWebhookBtn').addEventListener('click', function() {
+      const webhookUrl = document.getElementById('twilio_webhook_url');
+      webhookUrl.select();
+      document.execCommand('copy');
+      
+      // Show copied message
+      const originalText = this.innerHTML;
+      this.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(() => {
+        this.innerHTML = originalText;
+      }, 2000);
+    });
+    
+    // Temperature slider
+    const temperatureSlider = document.getElementById('openai_temperature');
+    const temperatureValue = document.getElementById('temperatureValue');
+    
+    temperatureSlider.addEventListener('input', function() {
+      temperatureValue.textContent = this.value;
+    });
+    
+    // Voice model modal
+    const voiceModelModal = document.getElementById('voiceModelModal');
+    const addVoiceModelBtn = document.getElementById('addVoiceModelBtn');
+    const addFirstVoiceModelBtn = document.getElementById('addFirstVoiceModelBtn');
+    const cancelVoiceModel = document.getElementById('cancelVoiceModel');
+    const modalTitle = document.getElementById('modalTitle');
+    const voiceModelForm = document.getElementById('voiceModelForm');
+    
+    function openVoiceModelModal(isEdit = false, modelData = null) {
+      if (isEdit && modelData) {
+        modalTitle.textContent = 'Edit Voice Model';
+        document.getElementById('voice_model_id').value = modelData.id;
+        document.getElementById('voice_name').value = modelData.name;
+        document.getElementById('voice_provider').value = modelData.provider;
+        document.getElementById('voice_model_id_input').value = modelData.model_id;
+        document.getElementById('voice_language').value = modelData.language;
+        document.getElementById('voice_gender').value = modelData.gender;
+        
+        // Update form action
+        voiceModelForm.action = "{{ url_for('dashboard.update_voice_model') }}";
+      } else {
+        modalTitle.textContent = 'Add Voice Model';
+        voiceModelForm.reset();
+        document.getElementById('voice_model_id').value = '';
+        
+        // Reset form action
+        voiceModelForm.action = "{{ url_for('dashboard.add_voice_model') }}";
+      }
+      
+      voiceModelModal.classList.remove('hidden');
+    }
+    
+    addVoiceModelBtn.addEventListener('click', function() {
+      openVoiceModelModal();
+    });
+    
+    if (addFirstVoiceModelBtn) {
+      addFirstVoiceModelBtn.addEventListener('click', function() {
+        openVoiceModelModal();
+      });
+    }
+    
+    cancelVoiceModel.addEventListener('click', function() {
+      voiceModelModal.classList.add('hidden');
+    });
+    
+    // Edit voice model
+    document.querySelectorAll('.edit-voice-model').forEach(button => {
+      button.addEventListener('click', function() {
+        const modelId = this.dataset.id;
+        
+        // Fetch model data (in a real app, this would be an API call)
+        // For demo purposes, we'll use dummy data
+        const modelData = {
+          id: modelId,
+          name: this.closest('.p-3').querySelector('h5').textContent,
+          provider: this.closest('.p-3').querySelector('p:nth-of-type(2)').textContent.split(': ')[1],
+          model_id: this.closest('.p-3').querySelector('p:nth-of-type(3)').textContent.split(': ')[1],
+          language: this.closest('.p-3').querySelector('.text-gray-500').textContent.split(' ')[1].replace('(', '').replace(')', ''),
+          gender: 'neutral' // Default, would come from API
+        };
+        
+        openVoiceModelModal(true, modelData);
+      });
+    });
+    
+    // Delete voice model
+    const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+    const cancelDelete = document.getElementById('cancelDelete');
+    
+    document.querySelectorAll('.delete-voice-model').forEach(button => {
+      button.addEventListener('click', function() {
+        const modelId = this.dataset.id;
+        document.getElementById('delete_model_id').value = modelId;
+        deleteConfirmModal.classList.remove('hidden');
+      });
+    });
+    
+    cancelDelete.addEventListener('click', function() {
+      deleteConfirmModal.classList.add('hidden');
+    });
+    
+    // Test connection modals
+    const testConnectionModal = document.getElementById('testConnectionModal');
+    const testModalTitle = document.getElementById('testModalTitle');
+    const testLoading = document.getElementById('testLoading');
+    const testSuccess = document.getElementById('testSuccess');
+    const testError = document.getElementById('testError');
+    const testSuccessMessage = document.getElementById('testSuccessMessage');
+    const testErrorMessage = document.getElementById('testErrorMessage');
+    const closeTestModal = document.getElementById('closeTestModal');
+    
+    function openTestModal(service) {
+      testModalTitle.textContent = `Test ${service} Connection`;
+      testLoading.classList.remove('hidden');
+      testSuccess.classList.add('hidden');
+      testError.classList.add('hidden');
+      testConnectionModal.classList.remove('hidden');
+      
+      // Simulate API call
+      setTimeout(() => {
+        testLoading.classList.add('hidden');
+        
+        if (service === 'Twilio') {
+          testSuccess.classList.remove('hidden');
+          testSuccessMessage.textContent = 'Successfully connected to Twilio API. Your account is active and the phone number is valid.';
+        } else if (service === 'OpenAI') {
+          testSuccess.classList.remove('hidden');
+          testSuccessMessage.textContent = 'Successfully connected to OpenAI API. Your account has sufficient credits and the selected model is available.';
+        }
+      }, 2000);
+    }
+    
+    document.getElementById('testTwilioBtn').addEventListener('click', function() {
+      openTestModal('Twilio');
+    });
+    
+    document.getElementById('testOpenAIBtn').addEventListener('click', function() {
+      openTestModal('OpenAI');
+    });
+    
+    closeTestModal.addEventListener('click', function() {
+      testConnectionModal.classList.add('hidden');
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Create Campaign - VOX{% endblock %}
+
+{% block heading %}Create Campaign{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+  <div>
+    <h2 class="text-xl font-bold">Create New Campaign</h2>
+    <p class="text-gray-500">Set up a new calling campaign for your voters</p>
+  </div>
+  
+  <div>
+    <a href="{{ url_for('dashboard.campaigns') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to Campaigns
+    </a>
+  </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-6">
+    <form method="POST" action="{{ url_for('dashboard.create_campaign') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      
+      <!-- Campaign Details -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold mb-4">Campaign Details</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="name" class="block text-gray-700 font-medium mb-2">Campaign Name <span class="text-red-500">*</span></label>
+            <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+          </div>
+          
+          <div>
+            <label for="status" class="block text-gray-700 font-medium mb-2">Initial Status</label>
+            <select id="status" name="is_active" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="0">Draft (inactive)</option>
+              <option value="1">Active</option>
+            </select>
+          </div>
+          
+          <div class="md:col-span-2">
+            <label for="description" class="block text-gray-700 font-medium mb-2">Description</label>
+            <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Voice & Flow Configuration -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold mb-4">Voice & Flow Configuration</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="voice_model_id" class="block text-gray-700 font-medium mb-2">Voice Model <span class="text-red-500">*</span></label>
+            <select id="voice_model_id" name="voice_model_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+              <option value="">-- Select Voice Model --</option>
+              {% for model in voice_models %}
+              <option value="{{ model.id }}">{{ model.name }} ({{ model.language|upper }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div>
+            <label for="flow_id" class="block text-gray-700 font-medium mb-2">Conversation Flow <span class="text-red-500">*</span></label>
+            <select id="flow_id" name="flow_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+              <option value="">-- Select Conversation Flow --</option>
+              {% for flow in flows %}
+              <option value="{{ flow.id }}">{{ flow.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div>
+            <label for="fallback_language" class="block text-gray-700 font-medium mb-2">Fallback Language</label>
+            <select id="fallback_language" name="fallback_language" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="en">English</option>
+              <option value="sw">Swahili</option>
+              <option value="lg">Luganda</option>
+              <option value="ny">Runyankole</option>
+            </select>
+            <p class="text-sm text-gray-500 mt-1">Used when voter's preferred language is unknown</p>
+          </div>
+          
+          <div>
+            <label for="default_voice_emotion" class="block text-gray-700 font-medium mb-2">Default Voice Emotion</label>
+            <select id="default_voice_emotion" name="default_voice_emotion" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="neutral">Neutral</option>
+              <option value="happy">Happy</option>
+              <option value="excited">Excited</option>
+              <option value="calm">Calm</option>
+              <option value="sad">Sad</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Voter Lists -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold mb-4">Voter Lists</h3>
+        
+        <div class="bg-gray-50 p-4 rounded-lg mb-4">
+          <p class="text-sm text-gray-500">Select the voter lists to include in this campaign. You can add multiple lists.</p>
+        </div>
+        
+        <div class="max-h-60 overflow-y-auto border rounded-lg">
+          {% if voter_lists %}
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                  <span class="sr-only">Select</span>
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voters</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for list in voter_lists %}
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <input type="checkbox" id="list_{{ list.id }}" name="voter_list_ids" value="{{ list.id }}" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <label for="list_{{ list.id }}" class="text-sm font-medium text-gray-900 cursor-pointer">{{ list.name }}</label>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm text-gray-500">{{ list.voter_count }}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm text-gray-500">{{ list.created_at.strftime('%Y-%m-%d') }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-6">
+            <p class="text-gray-500">No voter lists available</p>
+            <a href="{{ url_for('dashboard.create_voter_list') }}" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium mt-2 inline-block">
+              Create a Voter List <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Schedule & Limits -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold mb-4">Schedule & Limits</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="start_date" class="block text-gray-700 font-medium mb-2">Start Date</label>
+            <input type="date" id="start_date" name="start_date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div>
+            <label for="end_date" class="block text-gray-700 font-medium mb-2">End Date</label>
+            <input type="date" id="end_date" name="end_date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div>
+            <label for="daily_start_time" class="block text-gray-700 font-medium mb-2">Daily Start Time</label>
+            <input type="time" id="daily_start_time" name="daily_start_time" value="09:00" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div>
+            <label for="daily_end_time" class="block text-gray-700 font-medium mb-2">Daily End Time</label>
+            <input type="time" id="daily_end_time" name="daily_end_time" value="18:00" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div>
+            <label for="max_calls_per_day" class="block text-gray-700 font-medium mb-2">Max Calls Per Day</label>
+            <input type="number" id="max_calls_per_day" name="max_calls_per_day" value="100" min="1" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div>
+            <label for="max_calls_per_hour" class="block text-gray-700 font-medium mb-2">Max Calls Per Hour</label>
+            <input type="number" id="max_calls_per_hour" name="max_calls_per_hour" value="20" min="1" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div>
+            <label for="retry_attempts" class="block text-gray-700 font-medium mb-2">Retry Attempts</label>
+            <input type="number" id="retry_attempts" name="retry_attempts" value="2" min="0" max="5" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="text-sm text-gray-500 mt-1">Number of times to retry failed or unanswered calls</p>
+          </div>
+          
+          <div>
+            <label for="retry_delay" class="block text-gray-700 font-medium mb-2">Retry Delay (hours)</label>
+            <input type="number" id="retry_delay" name="retry_delay" value="24" min="1" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="text-sm text-gray-500 mt-1">Hours to wait before retrying a call</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Advanced Options -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold mb-4">Advanced Options</h3>
+        
+        <div class="space-y-4">
+          <div class="flex items-center">
+            <input type="checkbox" id="record_calls" name="record_calls" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <label for="record_calls" class="ml-2 block text-gray-700">
+              Record calls for quality and training purposes
+            </label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="respect_dnc" name="respect_dnc" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <label for="respect_dnc" class="ml-2 block text-gray-700">
+              Respect "Do Not Call" flags
+            </label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="detect_answering_machine" name="detect_answering_machine" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <label for="detect_answering_machine" class="ml-2 block text-gray-700">
+              Detect answering machines
+            </label>
+          </div>
+          
+          <div class="flex items-center">
+            <input type="checkbox" id="leave_voicemail" name="leave_voicemail" value="1" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <label for="leave_voicemail" class="ml-2 block text-gray-700">
+              Leave voicemail if no answer
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 flex justify-end">
+        <a href="{{ url_for('dashboard.campaigns') }}" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+          Cancel
+        </a>
+        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+          Create Campaign
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    // Set start date to today
+    const today = new Date();
+    startDateInput.valueAsDate = today;
+    
+    // Set end date to 30 days from now
+    const endDate = new Date();
+    endDate.setDate(today.getDate() + 30);
+    endDateInput.valueAsDate = endDate;
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+      // Validate campaign name
+      const nameInput = document.getElementById('name');
+      if (!nameInput.value.trim()) {
+        e.preventDefault();
+        alert('Please enter a campaign name');
+        nameInput.focus();
+        return;
+      }
+      
+      // Validate voice model selection
+      const voiceModelInput = document.getElementById('voice_model_id');
+      if (!voiceModelInput.value) {
+        e.preventDefault();
+        alert('Please select a voice model');
+        voiceModelInput.focus();
+        return;
+      }
+      
+      // Validate flow selection
+      const flowInput = document.getElementById('flow_id');
+      if (!flowInput.value) {
+        e.preventDefault();
+        alert('Please select a conversation flow');
+        flowInput.focus();
+        return;
+      }
+      
+      // Validate voter lists selection
+      const voterListCheckboxes = document.querySelectorAll('input[name="voter_list_ids"]:checked');
+      if (voterListCheckboxes.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one voter list');
+        return;
+      }
+      
+      // Validate date range
+      if (startDateInput.value && endDateInput.value) {
+        const startDate = new Date(startDateInput.value);
+        const endDate = new Date(endDateInput.value);
+        
+        if (endDate < startDate) {
+          e.preventDefault();
+          alert('End date cannot be earlier than start date');
+          endDateInput.focus();
+          return;
+        }
+      }
+      
+      // Validate time range
+      const startTimeInput = document.getElementById('daily_start_time');
+      const endTimeInput = document.getElementById('daily_end_time');
+      
+      if (startTimeInput.value && endTimeInput.value) {
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+        
+        if (endTime <= startTime) {
+          e.preventDefault();
+          alert('End time must be later than start time');
+          endTimeInput.focus();
+          return;
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

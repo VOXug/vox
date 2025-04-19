@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Voice Model: {{ model.name }} - VOX{% endblock %}
+
+{% block heading %}Voice Model: {{ model.name }}{% endblock %}
+
+{% block content %}
+<!-- Model Header -->
+<div class="flex justify-between items-center mb-6">
+  <div class="flex items-center">
+    <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 mr-4">
+      <i class="fas fa-microphone-alt text-2xl"></i>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold">{{ model.name }}</h2>
+      <p class="text-gray-500">{{ model.description }}</p>
+    </div>
+  </div>
+  
+  <div class="flex space-x-2">
+    <a href="{{ url_for('admin.edit_voice_model', model_id=model.id) }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-edit mr-1"></i> Edit
+    </a>
+    <a href="{{ url_for('admin.voice_models') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to Models
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Model Information -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Model Information</h3>
+      
+      <div class="p-6">
+        <div class="space-y-4">
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Name</p>
+            <p class="text-gray-900 font-medium">{{ model.name }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Type</p>
+            <p class="text-gray-900 font-medium">{{ model.model_type|title }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Status</p>
+            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+              {% if model.status == 'ready' %}bg-green-100 text-green-800
+              {% elif model.status == 'training' %}bg-yellow-100 text-yellow-800
+              {% elif model.status == 'failed' %}bg-red-100 text-red-800
+              {% else %}bg-gray-100 text-gray-800{% endif %}">
+              {{ model.status|title }}
+            </span>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Created</p>
+            <p class="text-gray-900 font-medium">{{ model.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Last Updated</p>
+            <p class="text-gray-900 font-medium">{{ model.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Sample Duration</p>
+            <p class="text-gray-900 font-medium">{{ model.sample_duration or 'N/A' }} seconds</p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Language</p>
+            <p class="text-gray-900 font-medium">
+              {% if model.language == 'en' %}English
+              {% elif model.language == 'sw' %}Swahili
+              {% elif model.language == 'lg' %}Luganda
+              {% elif model.language == 'ny' %}Runyankole
+              {% else %}{{ model.language }}
+              {% endif %}
+            </p>
+          </div>
+          
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Gender</p>
+            <p class="text-gray-900 font-medium">{{ model.gender|title }}</p>
+          </div>
+          
+          {% if model.notes %}
+          <div>
+            <p class="text-gray-500 text-sm mb-1">Notes</p>
+            <p class="text-gray-900">{{ model.notes }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Model Actions -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Actions</h3>
+      
+      <div class="p-6">
+        <div class="space-y-3">
+          {% if model.status == 'ready' %}
+          <a href="{{ url_for('admin.test_voice_model', model_id=model.id) }}" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-play mr-2"></i> Test Model
+          </a>
+          
+          <a href="{{ url_for('admin.retrain_voice_model', model_id=model.id) }}" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-sync-alt mr-2"></i> Retrain Model
+          </a>
+          {% elif model.status == 'training' %}
+          <button disabled class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-500 cursor-not-allowed">
+            <i class="fas fa-spinner fa-spin mr-2"></i> Training in Progress
+          </button>
+          {% elif model.status == 'failed' %}
+          <a href="{{ url_for('admin.retrain_voice_model', model_id=model.id) }}" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+            <i class="fas fa-redo mr-2"></i> Retry Training
+          </a>
+          {% else %}
+          <a href="{{ url_for('admin.train_voice_model', model_id=model.id) }}" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <i class="fas fa-cogs mr-2"></i> Start Training
+          </a>
+          {% endif %}
+          
+          <form method="POST" action="{{ url_for('admin.delete_voice_model', model_id=model.id) }}" onsubmit="return confirm('Are you sure you want to delete this voice model? This action cannot be undone.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              <i class="fas fa-trash mr-2"></i> Delete Model
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Voice Samples and Testing -->
+  <div class="lg:col-span-2">
+    <!-- Voice Samples -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Voice Samples</h3>
+      
+      <div class="p-6">
+        {% if samples %}
+        <div class="space-y-4">
+          {% for sample in samples %}
+          <div class="border rounded-lg p-4">
+            <div class="flex justify-between items-center mb-2">
+              <h4 class="font-medium">{{ sample.name }}</h4>
+              <span class="text-sm text-gray-500">{{ sample.duration }} seconds</span>
+            </div>
+            
+            <audio controls class="w-full mb-2">
+              <source src="{{ url_for('admin.get_sample_audio', sample_id=sample.id) }}" type="audio/mpeg">
+              Your browser does not support the audio element.
+            </audio>
+            
+            <div class="flex justify-end">
+              <form method="POST" action="{{ url_for('admin.delete_sample', sample_id=sample.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="text-red-600 hover:text-red-900">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-6">
+          <div class="text-indigo-500 mb-4">
+            <i class="fas fa-microphone-slash text-6xl"></i>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No voice samples</h3>
+          <p class="text-gray-500 mb-6">Upload voice samples to train this model</p>
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('admin.upload_sample', model_id=model.id) }}" enctype="multipart/form-data" class="mt-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="dropZone">
+            <input type="file" id="sampleFile" name="sample" class="hidden" accept="audio/wav,audio/mp3,audio/mpeg">
+            <div class="text-gray-500 mb-2">
+              <i class="fas fa-cloud-upload-alt text-3xl"></i>
+            </div>
+            <p class="text-gray-700 mb-2">Drag and drop your audio file here</p>
+            <p class="text-gray-500 text-sm mb-4">or</p>
+            <button type="button" id="browseBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              Browse Files
+            </button>
+            <p id="selectedFileName" class="mt-3 text-sm text-gray-600 hidden"></p>
+          </div>
+          <p class="text-sm text-gray-500 mt-2">
+            Supported formats: MP3, WAV. For best results, use high-quality recordings with minimal background noise.
+          </p>
+          
+          <div class="mt-4">
+            <label for="sampleName" class="block text-gray-700 font-medium mb-2">Sample Name</label>
+            <input type="text" id="sampleName" name="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+          </div>
+          
+          <div class="flex justify-end mt-4">
+            <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              <i class="fas fa-upload mr-1"></i> Upload Sample
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Test Voice Generation -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Test Voice Generation</h3>
+      
+      <div class="p-6">
+        {% if model.status == 'ready' %}
+        <form id="testVoiceForm" action="{{ url_for('admin.generate_test_audio', model_id=model.id) }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <div class="mb-4">
+            <label for="testText" class="block text-gray-700 font-medium mb-2">Text to Speak</label>
+            <textarea id="testText" name="text" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter text to be spoken by the AI voice..."></textarea>
+          </div>
+          
+          <div class="mb-4">
+            <label for="testLanguage" class="block text-gray-700 font-medium mb-2">Language</label>
+            <select id="testLanguage" name="language" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="en" {% if model.language == 'en' %}selected{% endif %}>English</option>
+              <option value="sw" {% if model.language == 'sw' %}selected{% endif %}>Swahili</option>
+              <option value="lg" {% if model.language == 'lg' %}selected{% endif %}>Luganda</option>
+              <option value="ny" {% if model.language == 'ny' %}selected{% endif %}>Runyankole</option>
+            </select>
+          </div>
+          
+          <div class="mb-4">
+            <label for="testEmotion" class="block text-gray-700 font-medium mb-2">Emotion</label>
+            <select id="testEmotion" name="emotion" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="neutral">Neutral</option>
+              <option value="happy">Happy</option>
+              <option value="sad">Sad</option>
+              <option value="excited">Excited</option>
+              <option value="calm">Calm</option>
+            </select>
+          </div>
+          
+          <div class="flex justify-end">
+            <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              <i class="fas fa-play mr-1"></i> Generate Audio
+            </button>
+          </div>
+        </form>
+        
+        <div id="generatedAudioContainer" class="mt-6 hidden">
+          <h4 class="font-medium text-gray-900 mb-3">Generated Audio</h4>
+          
+          <div class="border rounded-lg p-4">
+            <audio id="generatedAudio" controls class="w-full">
+              Your browser does not support the audio element.
+            </audio>
+            
+            <div class="flex justify-end mt-2">
+              <a id="downloadAudio" href="#" class="text-indigo-600 hover:text-indigo-900">
+                <i class="fas fa-download mr-1"></i> Download
+              </a>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center py-6">
+          <div class="text-yellow-500 mb-4">
+            <i class="fas fa-exclamation-triangle text-6xl"></i>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Model not ready</h3>
+          <p class="text-gray-500">
+            {% if model.status == 'training' %}
+            This model is currently being trained. Please check back later.
+            {% elif model.status == 'failed' %}
+            Training failed for this model. Please try retraining.
+            {% else %}
+            This model needs to be trained before it can be used for voice generation.
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // File upload handling
+    const dropZone = document.getElementById('dropZone');
+    const sampleFile = document.getElementById('sampleFile');
+    const browseBtn = document.getElementById('browseBtn');
+    const selectedFileName = document.getElementById('selectedFileName');
+    
+    if (browseBtn) {
+      browseBtn.addEventListener('click', function() {
+        sampleFile.click();
+      });
+    }
+    
+    if (sampleFile) {
+      sampleFile.addEventListener('change', function() {
+        if (this.files.length > 0) {
+          selectedFileName.textContent = this.files[0].name;
+          selectedFileName.classList.remove('hidden');
+          dropZone.classList.add('border-indigo-500');
+          dropZone.classList.remove('border-gray-300');
+        }
+      });
+    }
+    
+    if (dropZone) {
+      // Drag and drop functionality
+      dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.classList.add('border-indigo-500');
+        dropZone.classList.remove('border-gray-300');
+      });
+      
+      dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        if (!selectedFileName.textContent) {
+          dropZone.classList.remove('border-indigo-500');
+          dropZone.classList.add('border-gray-300');
+        }
+      });
+      
+      dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        
+        if (e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0];
+          if (file.type.startsWith('audio/')) {
+            sampleFile.files = e.dataTransfer.files;
+            selectedFileName.textContent = file.name;
+            selectedFileName.classList.remove('hidden');
+          } else {
+            alert('Please upload an audio file');
+            dropZone.classList.remove('border-indigo-500');
+            dropZone.classList.add('border-gray-300');
+          }
+        }
+      });
+    }
+    
+    // Test voice generation form
+    const testVoiceForm = document.getElementById('testVoiceForm');
+    const generatedAudioContainer = document.getElementById('generatedAudioContainer');
+    const generatedAudio = document.getElementById('generatedAudio');
+    const downloadAudio = document.getElementById('downloadAudio');
+    
+    if (testVoiceForm) {
+      testVoiceForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(testVoiceForm);
+        
+        // Show loading state
+        const submitBtn = testVoiceForm.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Generating...';
+        
+        fetch(testVoiceForm.action, {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Show the generated audio
+            generatedAudio.src = data.audio_url;
+            downloadAudio.href = data.audio_url;
+            generatedAudioContainer.classList.remove('hidden');
+            
+            // Scroll to the audio container
+            generatedAudioContainer.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error generating audio: ' + error);
+        })
+        .finally(() => {
+          // Reset button state
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        });
+      });
+    }
+  });
+</script>
+{% endblock %}

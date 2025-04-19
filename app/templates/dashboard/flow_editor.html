@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Conversation Flow Editor - VOX{% endblock %}
+
+{% block heading %}Conversation Flow Editor{% endblock %}
+
+{% block styles %}
+<style>
+  .node {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #e2e8f0;
+    background-color: white;
+    width: 250px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  .node-greeting {
+    border-left: 4px solid #4f46e5;
+  }
+  
+  .node-question {
+    border-left: 4px solid #10b981;
+  }
+  
+  .node-response {
+    border-left: 4px solid #f59e0b;
+  }
+  
+  .node-condition {
+    border-left: 4px solid #6366f1;
+  }
+  
+  .node-end {
+    border-left: 4px solid #ef4444;
+  }
+  
+  .connection {
+    stroke: #64748b;
+    stroke-width: 2px;
+    fill: none;
+  }
+  
+  .connection-arrow {
+    fill: #64748b;
+  }
+  
+  .connection-label {
+    font-size: 12px;
+    fill: #64748b;
+  }
+  
+  .node-handle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #4f46e5;
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+  <div>
+    <h2 class="text-xl font-bold">{{ flow.name }}</h2>
+    <p class="text-gray-500">{{ flow.description }}</p>
+  </div>
+  
+  <div class="flex space-x-2">
+    <button id="saveFlowBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-save mr-1"></i> Save Flow
+    </button>
+    <a href="{{ url_for('dashboard.conversation_flows') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-times mr-1"></i> Cancel
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+  <!-- Flow Designer Panel -->
+  <div class="lg:col-span-3">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-bold">Flow Designer</h3>
+        <div class="flex space-x-2">
+          <button id="zoomInBtn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+            <i class="fas fa-search-plus"></i>
+          </button>
+          <button id="zoomOutBtn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+            <i class="fas fa-search-minus"></i>
+          </button>
+          <button id="resetZoomBtn" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200">
+            <i class="fas fa-expand"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="relative" style="height: 600px; overflow: auto;">
+        <div id="flowCanvas" class="absolute inset-0">
+          <!-- Flow diagram will be rendered here -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Node Properties Panel -->
+  <div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="text-lg font-bold">Node Properties</h3>
+      </div>
+      
+      <div id="nodePropertiesPanel" class="p-4">
+        <div id="noNodeSelected" class="text-center py-8">
+          <i class="fas fa-mouse-pointer text-gray-400 text-4xl mb-2"></i>
+          <p class="text-gray-500">Select a node to edit its properties</p>
+        </div>
+        
+        <div id="nodeProperties" class="hidden">
+          <div class="mb-4">
+            <label for="nodeType" class="block text-gray-700 font-medium mb-2">Node Type</label>
+            <select id="nodeType" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="greeting">Greeting</option>
+              <option value="question">Question</option>
+              <option value="response">Response</option>
+              <option value="condition">Condition</option>
+              <option value="end">End Call</option>
+            </select>
+          </div>
+          
+          <div class="mb-4">
+            <label for="nodeLabel" class="block text-gray-700 font-medium mb-2">Label</label>
+            <input type="text" id="nodeLabel" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          
+          <div id="messageField" class="mb-4">
+            <label for="nodeMessage" class="block text-gray-700 font-medium mb-2">Message</label>
+            <textarea id="nodeMessage" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+          
+          <div id="conditionField" class="mb-4 hidden">
+            <label for="nodeCondition" class="block text-gray-700 font-medium mb-2">Condition</label>
+            <select id="nodeCondition" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="sentiment">Sentiment Check</option>
+              <option value="keyword">Keyword Detection</option>
+              <option value="language">Language Detection</option>
+              <option value="no_input">No Input</option>
+            </select>
+          </div>
+          
+          <div id="languageField" class="mb-4">
+            <label for="nodeLanguage" class="block text-gray-700 font-medium mb-2">Language</label>
+            <select id="nodeLanguage" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="en">English</option>
+              <option value="sw">Swahili</option>
+              <option value="lg">Luganda</option>
+              <option value="ny">Runyankole</option>
+            </select>
+          </div>
+          
+          <div class="flex justify-end mt-6">
+            <button id="deleteNodeBtn" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200 mr-2">
+              <i class="fas fa-trash mr-1"></i> Delete
+            </button>
+            <button id="updateNodeBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              <i class="fas fa-check mr-1"></i> Update
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Node Palette -->
+    <div class="bg-white rounded-lg shadow overflow-hidden mt-6">
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="text-lg font-bold">Add Node</h3>
+      </div>
+      
+      <div class="p-4 grid grid-cols-2 gap-2">
+        <div class="node node-greeting cursor-pointer" draggable="true" data-node-type="greeting">
+          <div class="font-medium">Greeting</div>
+          <div class="text-sm text-gray-500">Initial message</div>
+        </div>
+        
+        <div class="node node-question cursor-pointer" draggable="true" data-node-type="question">
+          <div class="font-medium">Question</div>
+          <div class="text-sm text-gray-500">Ask the voter</div>
+        </div>
+        
+        <div class="node node-response cursor-pointer" draggable="true" data-node-type="response">
+          <div class="font-medium">Response</div>
+          <div class="text-sm text-gray-500">Reply to voter</div>
+        </div>
+        
+        <div class="node node-condition cursor-pointer" draggable="true" data-node-type="condition">
+          <div class="font-medium">Condition</div>
+          <div class="text-sm text-gray-500">Branch the flow</div>
+        </div>
+        
+        <div class="node node-end cursor-pointer" draggable="true" data-node-type="end">
+          <div class="font-medium">End Call</div>
+          <div class="text-sm text-gray-500">Terminate call</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test Flow Modal -->
+<div id="testFlowModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
+    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+      <h3 class="text-lg font-bold">Test Conversation Flow</h3>
+      <button id="closeTestModal" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <div id="conversationContainer" class="bg-gray-100 p-4 rounded-lg mb-4" style="height: 300px; overflow-y: auto;">
+        <!-- Conversation messages will appear here -->
+      </div>
+      
+      <div class="flex">
+        <input type="text" id="userInput" class="flex-grow px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type your response...">
+        <button id="sendResponseBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-r-lg hover:bg-indigo-700 transition duration-200">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jsplumb/dist/js/jsplumb.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize jsPlumb
+    const jsPlumbInstance = jsPlumb.getInstance({
+      Connector: ["Bezier", { curviness: 50 }],
+      Endpoint: ["Dot", { radius: 4 }],
+      EndpointStyle: { fill: "#4f46e5" },
+      PaintStyle: { stroke: "#64748b", strokeWidth: 2 },
+      HoverPaintStyle: { stroke: "#4f46e5", strokeWidth: 3 },
+      ConnectionOverlays: [
+        ["Arrow", { location: 1, width: 10, length: 10, foldback: 0.7 }],
+        ["Label", { 
+          label: "", 
+          cssClass: "connection-label",
+          location: 0.5
+        }]
+      ],
+      Container: "flowCanvas"
+    });
+    
+    // Load flow data from server
+    let flowData = {{ flow_data|tojson|safe }};
+    
+    // Render the flow
+    function renderFlow() {
+      // Clear the canvas
+      const canvas = document.getElementById('flowCanvas');
+      canvas.innerHTML = '';
+      jsPlumbInstance.reset();
+      
+      // Add nodes
+      flowData.nodes.forEach(node => {
+        addNodeToCanvas(node);
+      });
+      
+      // Add connections
+      flowData.connections.forEach(conn => {
+        jsPlumbInstance.connect({
+          source: conn.source,
+          target: conn.target,
+          overlays: [
+            ["Label", { label: conn.label || "", cssClass: "connection-label" }]
+          ]
+        });
+      });
+    }
+    
+    // Add a node to the canvas
+    function addNodeToCanvas(node) {
+      const nodeEl = document.createElement('div');
+      nodeEl.id = node.id;
+      nodeEl.className = `node node-${node.type} absolute`;
+      nodeEl.style.left = `${node.position.x}px`;
+      nodeEl.style.top = `${node.position.y}px`;
+      
+      nodeEl.innerHTML = `
+        <div class="font-medium">${node.label}</div>
+        <div class="text-sm text-gray-500">${node.type}</div>
+      `;
+      
+      document.getElementById('flowCanvas').appendChild(nodeEl);
+      
+      jsPlumbInstance.draggable(nodeEl, {
+        grid: [10, 10],
+        stop: function(event) {
+          // Update node position in flowData
+          const nodeId = event.el.id;
+          const nodeIndex = flowData.nodes.findIndex(n => n.id === nodeId);
+          
+          if (nodeIndex !== -1) {
+            flowData.nodes[nodeIndex].position = {
+              x: parseInt(event.el.style.left),
+              y: parseInt(event.el.style.top)
+            };
+          }
+        }
+      });
+      
+      jsPlumbInstance.makeSource(nodeEl, {
+        filter: ".node-handle",
+        anchor: "Right"
+      });
+      
+      jsPlumbInstance.makeTarget(nodeEl, {
+        anchor: "Left"
+      });
+      
+      // Add click handler to select node
+      nodeEl.addEventListener('click', function() {
+        selectNode(node.id);
+      });
+    }
+    
+    // Select a node to edit its properties
+    function selectNode(nodeId) {
+      // Find the node in flowData
+      const node = flowData.nodes.find(n => n.id === nodeId);
+      
+      if (!node) return;
+      
+      // Show node properties panel
+      document.getElementById('noNodeSelected').classList.add('hidden');
+      document.getElementById('nodeProperties').classList.remove('hidden');
+      
+      // Fill in the form fields
+      document.getElementById('nodeType').value = node.type;
+      document.getElementById('nodeLabel').value = node.label;
+      
+      if (node.message) {
+        document.getElementById('nodeMessage').value = node.message;
+      } else {
+        document.getElementById('nodeMessage').value = '';
+      }
+      
+      // Show/hide fields based on node type
+      updatePropertyFields(node.type);
+      
+      // Set language if available
+      if (node.language) {
+        document.getElementById('nodeLanguage').value = node.language;
+      }
+      
+      // Set condition if available
+      if (node.condition) {
+        document.getElementById('nodeCondition').value = node.condition;
+      }
+      
+      // Store the selected node ID
+      document.getElementById('nodeProperties').dataset.nodeId = nodeId;
+    }
+    
+    // Update property fields based on node type
+    function updatePropertyFields(nodeType) {
+      const messageField = document.getElementById('messageField');
+      const conditionField = document.getElementById('conditionField');
+      const languageField = document.getElementById('languageField');
+      
+      // Reset all fields
+      messageField.classList.add('hidden');
+      conditionField.classList.add('hidden');
+      languageField.classList.add('hidden');
+      
+      // Show relevant fields based on node type
+      switch (nodeType) {
+        case 'greeting':
+        case 'question':
+        case 'response':
+        case 'end':
+          messageField.classList.remove('hidden');
+          languageField.classList.remove('hidden');
+          break;
+        case 'condition':
+          conditionField.classList.remove('hidden');
+          break;
+      }
+    }
+    
+    // Node type change handler
+    document.getElementById('nodeType').addEventListener('change', function() {
+      updatePropertyFields(this.value);
+    });
+    
+    // Update node button handler
+    document.getElementById('updateNodeBtn').addEventListener('click', function() {
+      const nodeId = document.getElementById('nodeProperties').dataset.nodeId;
+      const nodeIndex = flowData.nodes.findIndex(n => n.id === nodeId);
+      
+      if (nodeIndex === -1) return;
+      
+      // Update node data
+      flowData.nodes[nodeIndex].type = document.getElementById('nodeType').value;
+      flowData.nodes[nodeIndex].label = document.getElementById('nodeLabel').value;
+      
+      if (!document.getElementById('messageField').classList.contains('hidden')) {
+        flowData.nodes[nodeIndex].message = document.getElementById('nodeMessage').value;
+      }
+      
+      if (!document.getElementById('conditionField').classList.contains('hidden')) {
+        flowData.nodes[nodeIndex].condition = document.getElementById('nodeCondition').value;
+      }
+      
+      if (!document.getElementById('languageField').classList.contains('hidden')) {
+        flowData.nodes[nodeIndex].language = document.getElementById('nodeLanguage').value;
+      }
+      
+      // Update the node appearance
+      const nodeEl = document.getElementById(nodeId);
+      nodeEl.className = `node node-${flowData.nodes[nodeIndex].type} absolute`;
+      nodeEl.querySelector('.font-medium').textContent = flowData.nodes[nodeIndex].label;
+      nodeEl.querySelector('.text-sm').textContent = flowData.nodes[nodeIndex].type;
+      
+      // Hide the properties panel
+      document.getElementById('noNodeSelected').classList.remove('hidden');
+      document.getElementById('nodeProperties').classList.add('hidden');
+    });
+    
+    // Delete node button handler
+    document.getElementById('deleteNodeBtn').addEventListener('click', function() {
+      const nodeId = document.getElementById('nodeProperties').dataset.nodeId;
+      const nodeIndex = flowData.nodes.findIndex(n => n.id === nodeId);
+      
+      if (nodeIndex === -1) return;
+      
+      // Remove the node from flowData
+      flowData.nodes.splice(nodeIndex, 1);
+      
+      // Remove connections involving this node
+      flowData.connections = flowData.connections.filter(conn => 
+        conn.source !== nodeId && conn.target !== nodeId
+      );
+      
+      // Re-render the flow
+      renderFlow();
+      
+      // Hide the properties panel
+      document.getElementById('noNodeSelected').classList.remove('hidden');
+      document.getElementById('nodeProperties').classList.add('hidden');
+    });
+    
+    // Save flow button handler
+    document.getElementById('saveFlowBtn').addEventListener('click', function() {
+      // Send flowData to server
+      fetch('{{ url_for("dashboard.save_flow", flow_id=flow.id) }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(flowData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Flow saved successfully!');
+        } else {
+          alert('Error saving flow: ' + data.error);
+        }
+      })
+      .catch(error => {
+        alert('Error saving flow: ' + error);
+      });
+    });
+    
+    // Make nodes from palette draggable
+    document.querySelectorAll('.node[draggable="true"]').forEach(node => {
+      node.addEventListener('dragstart', function(e) {
+        e.dataTransfer.setData('nodeType', this.dataset.nodeType);
+      });
+    });
+    
+    // Handle drop on canvas
+    document.getElementById('flowCanvas').addEventListener('dragover', function(e) {
+      e.preventDefault();
+    });
+    
+    document.getElementById('flowCanvas').addEventListener('drop', function(e) {
+      e.preventDefault();
+      
+      const nodeType = e.dataTransfer.getData('nodeType');
+      if (!nodeType) return;
+      
+      // Get drop position relative to canvas
+      const canvasRect = this.getBoundingClientRect();
+      const x = e.clientX - canvasRect.left;
+      const y = e.clientY - canvasRect.top;
+      
+      // Create new node
+      const newNode = {
+        id: 'node_' + Date.now(),
+        type: nodeType,
+        label: nodeType.charAt(0).toUpperCase() + nodeType.slice(1),
+        position: { x, y },
+        message: nodeType === 'greeting' ? 'Hello, thank you for taking our call.' : ''
+      };
+      
+      // Add to flowData
+      flowData.nodes.push(newNode);
+      
+      // Add to canvas
+      addNodeToCanvas(newNode);
+    });
+    
+    // Initial render
+    renderFlow();
+  });
+</script>
+{% endblock %}

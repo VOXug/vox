@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}Voter Lists - VOX{% endblock %}
+
+{% block heading %}Voter Lists{% endblock %}
+
+{% block content %}
+<!-- Actions Bar -->
+<div class="mb-6 flex flex-wrap justify-between items-center">
+  <div class="mb-2 sm:mb-0">
+    <h2 class="text-xl font-bold">Manage Voter Lists</h2>
+    <p class="text-gray-500">Import and manage voter contact information</p>
+  </div>
+  
+  <div class="flex space-x-2">
+    <button id="importBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-file-import mr-1"></i> Import Voters
+    </button>
+    <a href="{{ url_for('dashboard.create_voter_list') }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-plus mr-1"></i> New List
+    </a>
+  </div>
+</div>
+
+<!-- Voter Lists Table -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+    <h3 class="text-lg font-bold">Your Voter Lists</h3>
+    
+    <div class="relative">
+      <input type="text" id="listSearch" placeholder="Search lists..." class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 pl-10">
+      <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+    </div>
+  </div>
+  
+  {% if voter_lists %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voters</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        {% for list in voter_lists %}
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="ml-4">
+                <div class="text-sm font-medium text-gray-900">{{ list.name }}</div>
+                <div class="text-sm text-gray-500">ID: {{ list.id }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-sm text-gray-900">{{ list.description|truncate(50) }}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">{{ list.voter_count }}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">{{ list.created_at.strftime('%Y-%m-%d') }}</div>
+            <div class="text-sm text-gray-500">{{ list.created_at.strftime('%H:%M:%S') }}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            {% if list.is_active %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+              Active
+            </span>
+            {% else %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+              Inactive
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <a href="{{ url_for('dashboard.view_voter_list', list_id=list.id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('dashboard.edit_voter_list', list_id=list.id) }}" class="text-blue-600 hover:text-blue-900 mr-3">
+              <i class="fas fa-edit"></i>
+            </a>
+            <a href="#" class="text-red-600 hover:text-red-900 delete-list" data-list-id="{{ list.id }}">
+              <i class="fas fa-trash"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+    <nav class="flex items-center justify-between">
+      <div class="flex-1 flex justify-between sm:hidden">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('dashboard.voter_lists', page=pagination.prev_num) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          Previous
+        </a>
+        {% else %}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-gray-100 cursor-not-allowed">
+          Previous
+        </span>
+        {% endif %}
+        
+        {% if pagination.has_next %}
+        <a href="{{ url_for('dashboard.voter_lists', page=pagination.next_num) }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          Next
+        </a>
+        {% else %}
+        <span class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-gray-100 cursor-not-allowed">
+          Next
+        </span>
+        {% endif %}
+      </div>
+      
+      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ pagination.page * pagination.per_page - pagination.per_page + 1 }}</span> to <span class="font-medium">{{ min(pagination.page * pagination.per_page, pagination.total) }}</span> of <span class="font-medium">{{ pagination.total }}</span> results
+          </p>
+        </div>
+        
+        <div>
+          <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('dashboard.voter_lists', page=pagination.prev_num) }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <span class="sr-only">Previous</span>
+              <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+              <span class="sr-only">Previous</span>
+              <i class="fas fa-chevron-left"></i>
+            </span>
+            {% endif %}
+            
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+              {% if page_num %}
+                {% if page_num == pagination.page %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-indigo-500 bg-indigo-50 text-sm font-medium text-indigo-600">
+                  {{ page_num }}
+                </span>
+                {% else %}
+                <a href="{{ url_for('dashboard.voter_lists', page=page_num) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  {{ page_num }}
+                </a>
+                {% endif %}
+              {% else %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  ...
+                </span>
+              {% endif %}
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <a href="{{ url_for('dashboard.voter_lists', page=pagination.next_num) }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <span class="sr-only">Next</span>
+              <i class="fas fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+              <span class="sr-only">Next</span>
+              <i class="fas fa-chevron-right"></i>
+            </span>
+            {% endif %}
+          </nav>
+        </div>
+      </div>
+    </nav>
+  </div>
+  {% endif %}
+  
+  {% else %}
+  <div class="text-center py-12">
+    <div class="text-indigo-500 mb-4">
+      <i class="fas fa-users text-6xl"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No voter lists found</h3>
+    <p class="text-gray-500 mb-6">Get started by creating your first voter list or importing voters</p>
+    <div class="flex justify-center space-x-4">
+      <button id="emptyImportBtn" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200">
+        <i class="fas fa-file-import mr-1"></i> Import Voters
+      </button>
+      <a href="{{ url_for('dashboard.create_voter_list') }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+        <i class="fas fa-plus mr-1"></i> Create New List
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Import Voters Modal -->
+<div id="importModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
+    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+      <h3 class="text-lg font-bold">Import Voters</h3>
+      <button id="closeImportModal" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <form id="importForm" action="{{ url_for('dashboard.import_voters') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-4">
+          <label for="importFile" class="block text-gray-700 font-medium mb-2">CSV File</label>
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="dropZone">
+            <input type="file" id="importFile" name="file" class="hidden" accept=".csv">
+            <div class="text-gray-500 mb-2">
+              <i class="fas fa-cloud-upload-alt text-3xl"></i>
+            </div>
+            <p class="text-gray-700 mb-2">Drag and drop your CSV file here</p>
+            <p class="text-gray-500 text-sm mb-4">or</p>
+            <button type="button" id="browseBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+              Browse Files
+            </button>
+            <p id="selectedFileName" class="mt-3 text-sm text-gray-600 hidden"></p>
+          </div>
+          <p class="text-sm text-gray-500 mt-2">
+            File must be a CSV with columns: name, phone_number, location (optional), language_preference (optional)
+          </p>
+        </div>
+        
+        <div class="mb-4">
+          <label for="listName" class="block text-gray-700 font-medium mb-2">List Name</label>
+          <input type="text" id="listName" name="list_name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+        
+        <div class="mb-4">
+          <label for="listDescription" class="block text-gray-700 font-medium mb-2">Description</label>
+          <textarea id="listDescription" name="description" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+        
+        <div class="flex justify-end">
+          <button type="button" id="cancelImport" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+            Cancel
+          </button>
+          <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            Import Voters
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Confirm Deletion</h3>
+    </div>
+    
+    <div class="p-6">
+      <p class="text-gray-700 mb-6">Are you sure you want to delete this voter list? This action cannot be undone.</p>
+      
+      <div class="flex justify-end">
+        <button id="cancelDelete" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+          Cancel
+        </button>
+        <form id="deleteForm" action="" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Import Modal
+    const importModal = document.getElementById('importModal');
+    const importBtn = document.getElementById('importBtn');
+    const emptyImportBtn = document.getElementById('emptyImportBtn');
+    const closeImportModal = document.getElementById('closeImportModal');
+    const cancelImport = document.getElementById('cancelImport');
+    const browseBtn = document.getElementById('browseBtn');
+    const importFile = document.getElementById('importFile');
+    const selectedFileName = document.getElementById('selectedFileName');
+    const dropZone = document.getElementById('dropZone');
+    
+    function showImportModal() {
+      importModal.classList.remove('hidden');
+    }
+    
+    function hideImportModal() {
+      importModal.classList.add('hidden');
+    }
+    
+    if (importBtn) importBtn.addEventListener('click', showImportModal);
+    if (emptyImportBtn) emptyImportBtn.addEventListener('click', showImportModal);
+    closeImportModal.addEventListener('click', hideImportModal);
+    cancelImport.addEventListener('click', hideImportModal);
+    
+    browseBtn.addEventListener('click', function() {
+      importFile.click();
+    });
+    
+    importFile.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        selectedFileName.textContent = this.files[0].name;
+        selectedFileName.classList.remove('hidden');
+        dropZone.classList.add('border-indigo-500');
+        dropZone.classList.remove('border-gray-300');
+      }
+    });
+    
+    // Drag and drop functionality
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropZone.classList.add('border-indigo-500');
+      dropZone.classList.remove('border-gray-300');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      if (!selectedFileName.textContent) {
+        dropZone.classList.remove('border-indigo-500');
+        dropZone.classList.add('border-gray-300');
+      }
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      
+      if (e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+          importFile.files = e.dataTransfer.files;
+          selectedFileName.textContent = file.name;
+          selectedFileName.classList.remove('hidden');
+        } else {
+          alert('Please upload a CSV file');
+          dropZone.classList.remove('border-indigo-500');
+          dropZone.classList.add('border-gray-300');
+        }
+      }
+    });
+    
+    // Delete Modal
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteButtons = document.querySelectorAll('.delete-list');
+    const cancelDelete = document.getElementById('cancelDelete');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    function showDeleteModal(listId) {
+      deleteForm.action = "{{ url_for('dashboard.delete_voter_list', list_id=0) }}".replace('0', listId);
+      deleteModal.classList.remove('hidden');
+    }
+    
+    function hideDeleteModal() {
+      deleteModal.classList.add('hidden');
+    }
+    
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const listId = this.dataset.listId;
+        showDeleteModal(listId);
+      });
+    });
+    
+    cancelDelete.addEventListener('click', hideDeleteModal);
+    
+    // Search functionality
+    const listSearch = document.getElementById('listSearch');
+    
+    listSearch.addEventListener('keyup', function() {
+      const searchTerm = this.value.toLowerCase();
+      const rows = document.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        const name = row.querySelector('td:first-child .text-sm.font-medium').textContent.toLowerCase();
+        const description = row.querySelector('td:nth-child(2) .text-sm').textContent.toLowerCase();
+        
+        if (name.includes(searchTerm) || description.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

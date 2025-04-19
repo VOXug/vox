@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+
+{% block title %}Campaign Reports: {{ campaign.name }} - VOX{% endblock %}
+
+{% block heading %}Campaign Reports: {{ campaign.name }}{% endblock %}
+
+{% block content %}
+<!-- Campaign Header -->
+<div class="flex justify-between items-center mb-6">
+  <div class="flex items-center">
+    <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 mr-4">
+      <i class="fas fa-chart-bar text-2xl"></i>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold">{{ campaign.name }}</h2>
+      <p class="text-gray-500">Comprehensive analytics and insights</p>
+    </div>
+  </div>
+  
+  <div class="flex space-x-2">
+    <button id="exportReportBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-file-export mr-1"></i> Export Report
+    </button>
+    <a href="{{ url_for('dashboard.campaign_detail', id=campaign.id) }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to Campaign
+    </a>
+  </div>
+</div>
+
+<!-- Report Filters -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-4 border-b border-gray-200">
+    <h3 class="text-lg font-bold">Report Filters</h3>
+  </div>
+  
+  <div class="p-6">
+    <form id="reportFiltersForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label for="dateRange" class="block text-gray-700 font-medium mb-2">Date Range</label>
+        <select id="dateRange" name="date_range" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="7">Last 7 Days</option>
+          <option value="30" selected>Last 30 Days</option>
+          <option value="90">Last 90 Days</option>
+          <option value="all">All Time</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+      
+      <div id="customDateContainer" class="hidden md:col-span-2 grid grid-cols-2 gap-4">
+        <div>
+          <label for="startDate" class="block text-gray-700 font-medium mb-2">Start Date</label>
+          <input type="date" id="startDate" name="start_date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label for="endDate" class="block text-gray-700 font-medium mb-2">End Date</label>
+          <input type="date" id="endDate" name="end_date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      
+      <div>
+        <label for="groupBy" class="block text-gray-700 font-medium mb-2">Group By</label>
+        <select id="groupBy" name="group_by" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+        </select>
+      </div>
+      
+      <div class="md:col-span-4 flex justify-end">
+        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+          <i class="fas fa-filter mr-1"></i> Apply Filters
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Report Summary -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+  <div class="bg-white p-6 rounded-lg shadow">
+    <div class="flex items-center justify-between mb-4">
+      <h4 class="font-bold text-gray-700">Total Calls</h4>
+      <div class="p-2 rounded-full bg-indigo-100 text-indigo-500">
+        <i class="fas fa-phone"></i>
+      </div>
+    </div>
+    <p class="text-3xl font-bold">{{ stats.total_calls }}</p>
+    <div class="flex items-center mt-2 text-sm">
+      <span class="text-green-500 flex items-center">
+        <i class="fas fa-arrow-up mr-1"></i> {{ stats.call_growth }}%
+      </span>
+      <span class="text-gray-500 ml-2">vs previous period</span>
+    </div>
+  </div>
+  
+  <div class="bg-white p-6 rounded-lg shadow">
+    <div class="flex items-center justify-between mb-4">
+      <h4 class="font-bold text-gray-700">Avg. Call Duration</h4>
+      <div class="p-2 rounded-full bg-green-100 text-green-500">
+        <i class="fas fa-clock"></i>
+      </div>
+    </div>
+    <p class="text-3xl font-bold">{{ stats.avg_duration }}</p>
+    <div class="flex items-center mt-2 text-sm">
+      <span class="text-green-500 flex items-center">
+        <i class="fas fa-arrow-up mr-1"></i> {{ stats.duration_growth }}%
+      </span>
+      <span class="text-gray-500 ml-2">vs previous period</span>
+    </div>
+  </div>
+  
+  <div class="bg-white p-6 rounded-lg shadow">
+    <div class="flex items-center justify-between mb-4">
+      <h4 class="font-bold text-gray-700">Completion Rate</h4>
+      <div class="p-2 rounded-full bg-blue-100 text-blue-500">
+        <i class="fas fa-check-circle"></i>
+      </div>
+    </div>
+    <p class="text-3xl font-bold">{{ stats.completion_rate }}%</p>
+    <div class="flex items-center mt-2 text-sm">
+      <span class="text-{{ 'green' if stats.completion_growth > 0 else 'red' }}-500 flex items-center">
+        <i class="fas fa-arrow-{{ 'up' if stats.completion_growth > 0 else 'down' }} mr-1"></i> {{ stats.completion_growth|abs }}%
+      </span>
+      <span class="text-gray-500 ml-2">vs previous period</span>
+    </div>
+  </div>
+  
+  <div class="bg-white p-6 rounded-lg shadow">
+    <div class="flex items-center justify-between mb-4">
+      <h4 class="font-bold text-gray-700">Positive Sentiment</h4>
+      <div class="p-2 rounded-full bg-yellow-100 text-yellow-500">
+        <i class="fas fa-smile"></i>
+      </div>
+    </div>
+    <p class="text-3xl font-bold">{{ stats.positive_sentiment }}%</p>
+    <div class="flex items-center mt-2 text-sm">
+      <span class="text-{{ 'green' if stats.sentiment_growth > 0 else 'red' }}-500 flex items-center">
+        <i class="fas fa-arrow-{{ 'up' if stats.sentiment_growth > 0 else 'down' }} mr-1"></i> {{ stats.sentiment_growth|abs }}%
+      </span>
+      <span class="text-gray-500 ml-2">vs previous period</span>
+    </div>
+  </div>
+</div>
+
+<!-- Call Volume Trends -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-4 border-b border-gray-200">
+    <h3 class="text-lg font-bold">Call Volume Trends</h3>
+  </div>
+  
+  <div class="p-6">
+    <canvas id="callVolumeChart" height="300"></canvas>
+  </div>
+</div>
+
+<!-- Call Outcomes -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Call Status Distribution -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Call Status Distribution</h3>
+    </div>
+    
+    <div class="p-6">
+      <canvas id="callStatusChart" height="250"></canvas>
+    </div>
+  </div>
+  
+  <!-- Sentiment Analysis -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Sentiment Analysis</h3>
+    </div>
+    
+    <div class="p-6">
+      <canvas id="sentimentChart" height="250"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Language Distribution -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Language Usage -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Language Usage</h3>
+    </div>
+    
+    <div class="p-6">
+      <canvas id="languageChart" height="250"></canvas>
+    </div>
+  </div>
+  
+  <!-- Call Duration by Language -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Avg. Call Duration by Language</h3>
+    </div>
+    
+    <div class="p-6">
+      <canvas id="durationByLanguageChart" height="250"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Geographic Distribution -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-4 border-b border-gray-200">
+    <h3 class="text-lg font-bold">Geographic Distribution</h3>
+  </div>
+  
+  <div class="p-6">
+    <div id="mapContainer" style="height: 400px;"></div>
+  </div>
+</div>
+
+<!-- Top Conversation Topics -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-4 border-b border-gray-200">
+    <h3 class="text-lg font-bold">Top Conversation Topics</h3>
+  </div>
+  
+  <div class="p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <canvas id="topicsChart" height="300"></canvas>
+      </div>
+      
+      <div>
+        <h4 class="font-bold text-gray-700 mb-4">Topic Insights</h4>
+        <div class="space-y-4">
+          {% for topic in topics %}
+          <div class="p-4 rounded-lg border border-gray-200">
+            <div class="flex justify-between items-start">
+              <div>
+                <h5 class="font-bold text-gray-900">{{ topic.name }}</h5>
+                <p class="text-gray-500 text-sm">{{ topic.count }} mentions</p>
+              </div>
+              <span class="px-2 py-1 text-xs rounded-full {{ 'bg-green-100 text-green-800' if topic.sentiment > 0.5 else 'bg-red-100 text-red-800' if topic.sentiment < -0.5 else 'bg-blue-100 text-blue-800' }}">
+                {{ 'Positive' if topic.sentiment > 0.5 else 'Negative' if topic.sentiment < -0.5 else 'Neutral' }}
+              </span>
+            </div>
+            <p class="text-gray-700 mt-2 text-sm">{{ topic.description }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Report Modal -->
+<div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Export Report</h3>
+    </div>
+    
+    <div class="p-6">
+      <form id="exportForm">
+        <div class="mb-4">
+          <label for="exportFormat" class="block text-gray-700 font-medium mb-2">Format</label>
+          <select id="exportFormat" name="format" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="pdf">PDF</option>
+            <option value="csv">CSV</option>
+            <option value="excel">Excel</option>
+          </select>
+        </div>
+        
+        <div class="mb-4">
+          <label for="exportContent" class="block text-gray-700 font-medium mb-2">Content</label>
+          <div class="space-y-2">
+            <div class="flex items-center">
+              <input type="checkbox" id="includeCharts" name="include_charts" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="includeCharts" class="ml-2 block text-gray-700">Include charts and visualizations</label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="includeRawData" name="include_raw_data" value="1" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="includeRawData" class="ml-2 block text-gray-700">Include raw data</label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="includeInsights" name="include_insights" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+              <label for="includeInsights" class="ml-2 block text-gray-700">Include AI-generated insights</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex justify-end">
+          <button type="button" id="cancelExport" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+            Cancel
+          </button>
+          <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            Export
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Date range picker logic
+    const dateRangeSelect = document.getElementById('dateRange');
+    const customDateContainer = document.getElementById('customDateContainer');
+    
+    dateRangeSelect.addEventListener('change', function() {
+      if (this.value === 'custom') {
+        customDateContainer.classList.remove('hidden');
+      } else {
+        customDateContainer.classList.add('hidden');
+      }
+    });
+    
+    // Initialize with today's date
+    const today = new Date();
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    // Set default date range (30 days ago to today)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    startDate.valueAsDate = thirtyDaysAgo;
+    endDate.valueAsDate = today;
+    
+    // Export modal
+    const exportReportBtn = document.getElementById('exportReportBtn');
+    const exportModal = document.getElementById('exportModal');
+    const cancelExport = document.getElementById('cancelExport');
+    
+    exportReportBtn.addEventListener('click', function() {
+      exportModal.classList.remove('hidden');
+    });
+    
+    cancelExport.addEventListener('click', function() {
+      exportModal.classList.add('hidden');
+    });
+    
+    document.getElementById('exportForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Simulate export
+      const format = document.getElementById('exportFormat').value;
+      alert(`Report will be exported as ${format.toUpperCase()}. Download would start in a real implementation.`);
+      
+      // Close modal
+      exportModal.classList.add('hidden');
+    });
+    
+    // Charts
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    };
+    
+    // Call Volume Chart
+    const callVolumeCtx = document.getElementById('callVolumeChart').getContext('2d');
+    const callVolumeChart = new Chart(callVolumeCtx, {
+      type: 'line',
+      data: {
+        labels: {{ volume_data.labels|tojson|safe }},
+        datasets: [
+          {
+            label: 'Completed Calls',
+            data: {{ volume_data.completed|tojson|safe }},
+            borderColor: 'rgba(16, 185, 129, 1)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: 'Failed Calls',
+            data: {{ volume_data.failed|tojson|safe }},
+            borderColor: 'rgba(239, 68, 68, 1)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        ...chartOptions,
+        scales: {
+          x: {
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+    
+    // Call Status Chart
+    const callStatusCtx = document.getElementById('callStatusChart').getContext('2d');
+    const callStatusChart = new Chart(callStatusCtx, {
+      type: 'doughnut',
+      data: {
+        labels: {{ status_data.labels|tojson|safe }},
+        datasets: [{
+          data: {{ status_data.values|tojson|safe }},
+          backgroundColor: [
+            'rgba(16, 185, 129, 0.7)',
+            'rgba(239, 68, 68, 0.7)',
+            'rgba(245, 158, 11, 0.7)',
+            'rgba(99, 102, 241, 0.7)',
+            'rgba(107, 114, 128, 0.7)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: chartOptions
+    });
+    
+    // Sentiment Chart
+    const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+    const sentimentChart = new Chart(sentimentCtx, {
+      type: 'pie',
+      data: {
+        labels: {{ sentiment_data.labels|tojson|safe }},
+        datasets: [{
+          data: {{ sentiment_data.values|tojson|safe }},
+          backgroundColor: [
+            'rgba(16, 185, 129, 0.7)',
+            'rgba(99, 102, 241, 0.7)',
+            'rgba(239, 68, 68, 0.7)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: chartOptions
+    });
+    
+    // Language Chart
+    const languageCtx = document.getElementById('languageChart').getContext('2d');
+    const languageChart = new Chart(languageCtx, {
+      type: 'pie',
+      data: {
+        labels: {{ language_data.labels|tojson|safe }},
+        datasets: [{
+          data: {{ language_data.values|tojson|safe }},
+          backgroundColor: [
+            'rgba(99, 102, 241, 0.7)',
+            'rgba(245, 158, 11, 0.7)',
+            'rgba(16, 185, 129, 0.7)',
+            'rgba(236, 72, 153, 0.7)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: chartOptions
+    });
+    
+    // Duration by Language Chart
+    const durationByLanguageCtx = document.getElementById('durationByLanguageChart').getContext('2d');
+    const durationByLanguageChart = new Chart(durationByLanguageCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ duration_by_language.labels|tojson|safe }},
+        datasets: [{
+          label: 'Average Duration (minutes)',
+          data: {{ duration_by_language.values|tojson|safe }},
+          backgroundColor: 'rgba(99, 102, 241, 0.7)',
+          borderColor: 'rgba(99, 102, 241, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        ...chartOptions,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+    
+    // Topics Chart
+    const topicsCtx = document.getElementById('topicsChart').getContext('2d');
+    const topicsChart = new Chart(topicsCtx, {
+      type: 'horizontalBar',
+      data: {
+        labels: {{ topics_data.labels|tojson|safe }},
+        datasets: [{
+          label: 'Mentions',
+          data: {{ topics_data.values|tojson|safe }},
+          backgroundColor: 'rgba(99, 102, 241, 0.7)',
+          borderColor: 'rgba(99, 102, 241, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        ...chartOptions,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+    
+    // Initialize map
+    const map = L.map('mapContainer').setView([0.347596, 32.582520], 7); // Centered on Uganda
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Add markers for call locations
+    const locations = {{ geo_data|tojson|safe }};
+    
+    locations.forEach(location => {
+      const marker = L.marker([location.lat, location.lng]).addTo(map);
+      marker.bindPopup(`<b>${location.district}</b><br>${location.calls} calls`);
+    });
+    
+    // Add heat map layer if many points
+    if (locations.length > 20) {
+      const heatData = locations.map(loc => [loc.lat, loc.lng, loc.calls]);
+      L.heatLayer(heatData, {radius: 25}).addTo(map);
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,269 @@
+========================================================
+MULTILINGUAL VOICE AI CAMPAIGN SYSTEM - SETUP GUIDE
+========================================================
+
+This guide will help you set up and configure the Multilingual Voice AI Campaign System
+for Uganda's Presidential Election campaign. Follow these steps carefully to ensure
+proper installation and API integration.
+
+--------------------------------------------------------
+PREREQUISITES
+--------------------------------------------------------
+
+1. Python 3.9+ installed
+2. pip (Python package installer)
+3. Git (for version control)
+4. API keys for:
+   - Twilio (for telephony)
+   - OpenAI (for AI capabilities)
+   - Optional: ElevenLabs or other voice model providers
+
+--------------------------------------------------------
+INSTALLATION STEPS
+--------------------------------------------------------
+
+1. CLONE THE REPOSITORY (if you haven't already)
+   ```
+   git clone https://github.com/your-repo/vox.git
+   cd vox
+   ```
+
+2. CREATE AND ACTIVATE A VIRTUAL ENVIRONMENT
+   ```
+   # On Windows:
+   python -m venv venv
+   venv\Scripts\activate
+   
+   # On macOS/Linux:
+   python -m venv venv
+   source venv/bin/activate
+   ```
+
+3. INSTALL DEPENDENCIES
+   ```
+   pip install -r requirements.txt
+   ```
+   
+   Note: If you encounter issues with whisper installation, you may need to install
+   additional system dependencies. For Ubuntu/Debian:
+   ```
+   sudo apt-get update
+   sudo apt-get install -y ffmpeg
+   ```
+   
+   For Windows, download and install FFmpeg from: https://ffmpeg.org/download.html
+
+4. SET UP ENVIRONMENT VARIABLES
+   Create a .env file in the root directory with the following variables:
+   ```
+   # Flask Configuration
+   SECRET_KEY=your_secure_random_key
+   DATABASE_URI=sqlite:///vox.db
+   FLASK_APP=run.py
+   FLASK_ENV=development
+   
+   # Twilio Configuration
+   TWILIO_ACCOUNT_SID=your_twilio_account_sid
+   TWILIO_AUTH_TOKEN=your_twilio_auth_token
+   TWILIO_PHONE_NUMBER=your_twilio_phone_number
+   
+   # OpenAI Configuration
+   OPENAI_API_KEY=your_openai_api_key
+   
+   # Optional: ElevenLabs Configuration
+   ELEVENLABS_API_KEY=your_elevenlabs_api_key
+   ```
+
+5. INITIALIZE THE DATABASE
+   ```
+   flask db init
+   flask db migrate -m "Initial migration"
+   flask db upgrade
+   ```
+
+6. CREATE AN ADMIN USER
+   ```
+   flask shell
+   ```
+   
+   Then in the shell:
+   ```python
+   from app import db
+   from app.models import User
+   
+   admin = User(username='admin', email='admin@example.com', password='secure_password', is_admin=True)
+   db.session.add(admin)
+   db.session.commit()
+   exit()
+   ```
+
+7. INITIALIZE API CONFIGURATIONS
+   ```
+   flask shell
+   ```
+   
+   Then in the shell:
+   ```python
+   from app import db
+   from app.models import APIConfig
+   import json
+   
+   # Twilio Config
+   twilio_config = APIConfig(
+       name='twilio',
+       config_data=json.dumps({
+           'account_sid': 'your_twilio_account_sid',
+           'auth_token': 'your_twilio_auth_token',
+           'phone_number': 'your_twilio_phone_number'
+       }),
+       is_active=True
+   )
+   
+   # OpenAI Config
+   openai_config = APIConfig(
+       name='openai',
+       config_data=json.dumps({
+           'api_key': 'your_openai_api_key',
+           'model': 'gpt-4',
+           'temperature': 0.7,
+           'max_tokens': 1024
+       }),
+       is_active=True
+   )
+   
+   db.session.add(twilio_config)
+   db.session.add(openai_config)
+   db.session.commit()
+   exit()
+   ```
+
+8. RUN THE APPLICATION
+   ```
+   flask run
+   ```
+   
+   The application will be available at http://127.0.0.1:5000
+
+--------------------------------------------------------
+API INTEGRATION DETAILS
+--------------------------------------------------------
+
+1. TWILIO INTEGRATION
+   - Sign up for a Twilio account at https://www.twilio.com
+   - Purchase a phone number with voice capabilities
+   - Set up your webhook URL in the Twilio console:
+     - Go to Phone Numbers > Manage > Active Numbers > select your number
+     - Under "Voice & Fax" section, set the webhook URL to:
+       https://your-domain.com/api/call/incoming
+     - Make sure it's set to HTTP POST
+   - For local development, use ngrok to expose your local server:
+     ```
+     ngrok http 5000
+     ```
+     Then use the ngrok URL in your Twilio webhook settings.
+
+2. OPENAI INTEGRATION
+   - Sign up for an OpenAI account at https://platform.openai.com
+   - Create an API key in the OpenAI dashboard
+   - Add the API key to your .env file or directly in the database config
+   - The system uses GPT-4 for:
+     - Language detection
+     - Sentiment analysis
+     - Response generation
+   - Ensure your OpenAI account has access to GPT-4 API
+
+3. VOICE MODEL INTEGRATION
+   - The system supports multiple voice model providers:
+     - OpenAI TTS
+     - ElevenLabs
+     - Google Cloud TTS
+   - For each provider, you'll need to:
+     - Sign up for an account
+     - Get API credentials
+     - Configure the provider in the admin dashboard
+     - Create voice models for each supported language
+
+--------------------------------------------------------
+TESTING THE SYSTEM
+--------------------------------------------------------
+
+1. LOGIN TO THE ADMIN DASHBOARD
+   - Go to http://127.0.0.1:5000/login
+   - Use the admin credentials you created
+
+2. CONFIGURE API SETTINGS
+   - Go to API Configuration in the dashboard
+   - Verify Twilio and OpenAI settings
+   - Test the connections
+
+3. CREATE VOICE MODELS
+   - Add voice models for each supported language
+   - Test the voice generation
+
+4. CREATE A CONVERSATION FLOW
+   - Design a simple conversation flow
+   - Test the flow using the test interface
+
+5. IMPORT VOTER DATA
+   - Create a voter list
+   - Import sample voter data
+
+6. CREATE A TEST CAMPAIGN
+   - Set up a small campaign
+   - Schedule it for a limited time period
+   - Use the test call feature to verify functionality
+
+--------------------------------------------------------
+TROUBLESHOOTING
+--------------------------------------------------------
+
+1. DATABASE ISSUES
+   - If you encounter database errors, try:
+     ```
+     flask db stamp head
+     flask db migrate
+     flask db upgrade
+     ```
+
+2. API CONNECTION ISSUES
+   - Check your API keys in the configuration
+   - Verify network connectivity
+   - Check API service status pages
+
+3. VOICE GENERATION ISSUES
+   - Ensure FFmpeg is properly installed
+   - Check file permissions in the audio directory
+   - Verify voice model configurations
+
+4. TWILIO WEBHOOK ISSUES
+   - Verify your webhook URL is accessible
+   - Check Twilio logs for error messages
+   - Ensure your Twilio account has sufficient credits
+
+--------------------------------------------------------
+PRODUCTION DEPLOYMENT
+--------------------------------------------------------
+
+For production deployment, consider:
+
+1. Using a production-grade database (PostgreSQL recommended)
+2. Setting up HTTPS with a valid SSL certificate
+3. Using a production WSGI server (Gunicorn + Nginx)
+4. Implementing proper logging and monitoring
+5. Setting up regular database backups
+6. Configuring proper security measures
+
+For Docker deployment:
+```
+docker-compose build
+docker-compose up -d
+```
+
+--------------------------------------------------------
+CONTACT & SUPPORT
+--------------------------------------------------------
+
+For questions or support, contact:
+support@voiceaicampaign.com
+
+========================================================

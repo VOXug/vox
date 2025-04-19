@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Campaigns - VOX{% endblock %}
+
+{% block heading %}Campaigns{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+        <p class="text-gray-600">
+            Manage your voice AI calling campaigns. Create, monitor, and control your outreach efforts.
+        </p>
+        
+        {% if current_user.is_admin %}
+        <a href="#" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            <i class="fas fa-plus mr-1"></i> New Campaign
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- Campaign List -->
+    {% if campaigns %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for campaign in campaigns %}
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <h3 class="text-lg font-bold text-gray-900">{{ campaign.name }}</h3>
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        {% if campaign.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ 'Active' if campaign.is_active else 'Inactive' }}
+                    </span>
+                </div>
+                
+                <p class="mt-2 text-sm text-gray-600">{{ campaign.description|truncate(100) }}</p>
+                
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-500">Voice Model</p>
+                        <p class="text-sm font-medium">{{ campaign.voice_model.name }}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-500">Call Limit</p>
+                        <p class="text-sm font-medium">{{ campaign.max_calls_per_day }}/day</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500">Created</p>
+                            <p class="text-sm">{{ campaign.created_at.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500">Last Updated</p>
+                            <p class="text-sm">{{ campaign.updated_at.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 px-6 py-4">
+                <div class="flex justify-between">
+                    <a href="{{ url_for('dashboard.campaign_detail', id=campaign.id) }}" class="text-indigo-600 hover:text-indigo-900">
+                        View Details
+                    </a>
+                    
+                    {% if current_user.is_admin %}
+                    <form action="{{ url_for('dashboard.toggle_campaign', id=campaign.id) }}" method="POST" class="inline">
+                        <button type="submit" class="text-{{ 'red-600 hover:text-red-900' if campaign.is_active else 'green-600 hover:text-green-900' }}">
+                            {{ 'Deactivate' if campaign.is_active else 'Activate' }}
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-8 text-center">
+        <div class="inline-block p-4 rounded-full bg-indigo-100 text-indigo-500 mb-4">
+            <i class="fas fa-bullhorn text-4xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">No Campaigns Yet</h3>
+        <p class="text-gray-600 mb-6">You haven't created any voice AI campaigns yet.</p>
+        
+        {% if current_user.is_admin %}
+        <a href="#" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            <i class="fas fa-plus mr-1"></i> Create Your First Campaign
+        </a>
+        {% else %}
+        <p class="text-gray-500">Please contact an administrator to create a campaign.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

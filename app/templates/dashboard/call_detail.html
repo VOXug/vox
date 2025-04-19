@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Call Log #{{ call.id }} - VOX{% endblock %}
+
+{% block heading %}Call Log #{{ call.id }}{% endblock %}
+
+{% block content %}
+<!-- Call Header -->
+<div class="flex justify-between items-center mb-6">
+    <div class="flex items-center">
+        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+            {% if call.status == 'completed' %}bg-green-100 text-green-800
+            {% elif call.status in ['failed', 'busy', 'no-answer'] %}bg-red-100 text-red-800
+            {% else %}bg-yellow-100 text-yellow-800{% endif %} mr-2">
+            {{ call.status }}
+        </span>
+        <span class="text-gray-500 text-sm">{{ call.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+    </div>
+    
+    <div>
+        <a href="{{ url_for('dashboard.calls') }}" class="text-indigo-600 hover:text-indigo-900">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Call Logs
+        </a>
+    </div>
+</div>
+
+<!-- Call Details -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <!-- Call Information -->
+    <div class="bg-white rounded-lg shadow overflow-hidden md:col-span-2">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Information</h3>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Voter Phone Number</p>
+                    <p class="text-gray-900 font-medium">{{ call.voter.phone_number }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Campaign</p>
+                    <p class="text-gray-900 font-medium">{{ call.campaign.name }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Status</p>
+                    <p class="text-gray-900 font-medium">{{ call.status }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Duration</p>
+                    <p class="text-gray-900 font-medium">{{ call.duration|default('N/A') }} seconds</p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Language Used</p>
+                    <p class="text-gray-900 font-medium">
+                        {% if call.language_used %}
+                            {% if call.language_used == 'en' %}English
+                            {% elif call.language_used == 'sw' %}Swahili
+                            {% elif call.language_used == 'lg' %}Luganda
+                            {% elif call.language_used == 'ny' %}Runyankole
+                            {% else %}{{ call.language_used }}
+                            {% endif %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Sentiment</p>
+                    <p class="text-gray-900 font-medium">
+                        {% if call.sentiment %}
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if call.sentiment == 'positive' %}bg-green-100 text-green-800
+                                {% elif call.sentiment == 'negative' %}bg-red-100 text-red-800
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ call.sentiment|title }}
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Started At</p>
+                    <p class="text-gray-900 font-medium">{{ call.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Ended At</p>
+                    <p class="text-gray-900 font-medium">
+                        {% if call.ended_at %}
+                            {{ call.ended_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            {% if call.notes %}
+            <div class="mt-6">
+                <p class="text-gray-500 text-sm mb-1">Notes</p>
+                <p class="text-gray-900">{{ call.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Voter Information -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Voter Information</h3>
+        
+        <div class="p-6">
+            <div class="flex items-center mb-4">
+                <div class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
+                    <i class="fas fa-user text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h4 class="font-medium text-gray-900">{{ call.voter.name or 'Unknown Voter' }}</h4>
+                    <p class="text-gray-500 text-sm">{{ call.voter.phone_number }}</p>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                {% if call.voter.location %}
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Location</p>
+                    <p class="text-gray-900">{{ call.voter.location }}</p>
+                </div>
+                {% endif %}
+                
+                {% if call.voter.language_preference %}
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Preferred Language</p>
+                    <p class="text-gray-900">
+                        {% if call.voter.language_preference == 'en' %}English
+                        {% elif call.voter.language_preference == 'sw' %}Swahili
+                        {% elif call.voter.language_preference == 'lg' %}Luganda
+                        {% elif call.voter.language_preference == 'ny' %}Runyankole
+                        {% else %}{{ call.voter.language_preference }}
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+                
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Do Not Call</p>
+                    <p class="text-gray-900">{{ 'Yes' if call.voter.do_not_call else 'No' }}</p>
+                </div>
+                
+                {% if call.voter.notes %}
+                <div>
+                    <p class="text-gray-500 text-sm mb-1">Notes</p>
+                    <p class="text-gray-900">{{ call.voter.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call Transcript -->
+{% if call.transcript %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Transcript</h3>
+    
+    <div class="p-6">
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <pre class="whitespace-pre-wrap text-sm text-gray-700">{{ call.transcript }}</pre>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Call Recording -->
+{% if call.recording_url %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Recording</h3>
+    
+    <div class="p-6">
+        <audio controls class="w-full">
+            <source src="{{ call.recording_url }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+</div>
+{% endif %}
+
+<!-- Call Events Timeline -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Events Timeline</h3>
+    
+    {% if events %}
+    <div class="p-6">
+        <div class="flow-root">
+            <ul class="-mb-8">
+                {% for event in events %}
+                <li>
+                    <div class="relative pb-8">
+                        {% if not loop.last %}
+                        <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                        {% endif %}
+                        <div class="relative flex space-x-3">
+                            <div>
+                                <span class="h-8 w-8 rounded-full flex items-center justify-center 
+                                    {% if event.event_type == 'audio-played' %}bg-blue-100 text-blue-500
+                                    {% elif event.event_type == 'speech-detected' %}bg-green-100 text-green-500
+                                    {% elif event.event_type == 'response-analyzed' %}bg-purple-100 text-purple-500
+                                    {% elif event.event_type == 'no-input' %}bg-yellow-100 text-yellow-500
+                                    {% elif event.event_type == 'status-update' %}bg-indigo-100 text-indigo-500
+                                    {% else %}bg-gray-100 text-gray-500{% endif %}">
+                                    {% if event.event_type == 'audio-played' %}
+                                    <i class="fas fa-volume-up"></i>
+                                    {% elif event.event_type == 'speech-detected' %}
+                                    <i class="fas fa-microphone"></i>
+                                    {% elif event.event_type == 'response-analyzed' %}
+                                    <i class="fas fa-brain"></i>
+                                    {% elif event.event_type == 'no-input' %}
+                                    <i class="fas fa-volume-mute"></i>
+                                    {% elif event.event_type == 'status-update' %}
+                                    <i class="fas fa-info-circle"></i>
+                                    {% else %}
+                                    <i class="fas fa-circle"></i>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                <div>
+                                    <p class="text-sm text-gray-900 font-medium">
+                                        {% if event.event_type == 'audio-played' %}
+                                        System played audio
+                                        {% elif event.event_type == 'speech-detected' %}
+                                        Voter speech detected
+                                        {% elif event.event_type == 'response-analyzed' %}
+                                        Response analyzed
+                                        {% elif event.event_type == 'no-input' %}
+                                        No input detected
+                                        {% elif event.event_type == 'status-update' %}
+                                        Call status updated to {{ event.event_data.get('status', 'unknown') }}
+                                        {% else %}
+                                        {{ event.event_type|replace('-', ' ')|title }}
+                                        {% endif %}
+                                    </p>
+                                    
+                                    {% if event.event_type == 'speech-detected' and event.event_data and event.event_data.get('speech_text') %}
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        "{{ event.event_data.get('speech_text') }}"
+                                    </p>
+                                    {% endif %}
+                                    
+                                    {% if event.event_type == 'response-analyzed' and event.event_data and event.event_data.get('analysis') %}
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        Sentiment: {{ event.event_data.get('analysis', {}).get('sentiment', 'unknown')|title }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                    {{ event.timestamp.strftime('%H:%M:%S') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% else %}
+    <div class="p-6 text-center">
+        <p class="text-gray-500">No event data available for this call.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

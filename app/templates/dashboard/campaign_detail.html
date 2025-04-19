@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}{{ campaign.name }} - VOX{% endblock %}
+
+{% block heading %}Campaign: {{ campaign.name }}{% endblock %}
+
+{% block content %}
+<!-- Campaign Header -->
+<div class="flex justify-between items-center mb-6">
+    <div class="flex items-center">
+        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+            {% if campaign.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %} mr-2">
+            {{ 'Active' if campaign.is_active else 'Inactive' }}
+        </span>
+        <span class="text-gray-500 text-sm">Created: {{ campaign.created_at.strftime('%Y-%m-%d') }}</span>
+    </div>
+    
+    {% if current_user.is_admin %}
+    <div>
+        <form action="{{ url_for('dashboard.toggle_campaign', id=campaign.id) }}" method="POST" class="inline">
+            <button type="submit" class="bg-{{ 'red-600 hover:bg-red-700' if campaign.is_active else 'green-600 hover:bg-green-700' }} text-white py-2 px-4 rounded-lg transition duration-200 mr-2">
+                {{ 'Deactivate Campaign' if campaign.is_active else 'Activate Campaign' }}
+            </button>
+        </form>
+        <a href="#" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+            <i class="fas fa-edit mr-1"></i> Edit Campaign
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Campaign Details -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="p-6">
+        <h3 class="text-lg font-bold mb-4">Campaign Details</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <p class="text-gray-500 text-sm mb-1">Description</p>
+                <p class="text-gray-900">{{ campaign.description or 'No description provided' }}</p>
+            </div>
+            
+            <div>
+                <p class="text-gray-500 text-sm mb-1">Voice Model</p>
+                <p class="text-gray-900">{{ campaign.voice_model.name }}</p>
+            </div>
+            
+            <div>
+                <p class="text-gray-500 text-sm mb-1">Call Limits</p>
+                <p class="text-gray-900">{{ campaign.max_calls_per_day }} per day / {{ campaign.max_calls_per_hour }} per hour</p>
+            </div>
+            
+            <div>
+                <p class="text-gray-500 text-sm mb-1">Retry Attempts</p>
+                <p class="text-gray-900">{{ campaign.retry_attempts }}</p>
+            </div>
+            
+            {% if campaign.started_at %}
+            <div>
+                <p class="text-gray-500 text-sm mb-1">Started</p>
+                <p class="text-gray-900">{{ campaign.started_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+            {% endif %}
+            
+            {% if campaign.ended_at %}
+            <div>
+                <p class="text-gray-500 text-sm mb-1">Ended</p>
+                <p class="text-gray-900">{{ campaign.ended_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Campaign Stats -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
+                <i class="fas fa-phone text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Total Calls</p>
+                <p class="text-2xl font-bold">{{ stats.total_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-500 mr-4">
+                <i class="fas fa-check-circle text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Completed Calls</p>
+                <p class="text-2xl font-bold">{{ stats.completed_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-red-100 text-red-500 mr-4">
+                <i class="fas fa-times-circle text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Failed Calls</p>
+                <p class="text-2xl font-bold">{{ stats.failed_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100 text-purple-500 mr-4">
+                <i class="fas fa-chart-pie text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Completion Rate</p>
+                <p class="text-2xl font-bold">{{ "%.1f"|format(stats.completion_rate) }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation Flows -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="flex justify-between items-center p-6 pb-4">
+        <h3 class="text-lg font-bold">Conversation Flows</h3>
+        
+        {% if current_user.is_admin %}
+        <a href="#" class="text-indigo-600 hover:text-indigo-900">
+            <i class="fas fa-plus mr-1"></i> Add Flow
+        </a>
+        {% endif %}
+    </div>
+    
+    {% if flows %}
+    <div class="px-6 pb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for flow in flows %}
+            <div class="border rounded-lg p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="font-medium text-gray-900">{{ flow.name }}</h4>
+                    <a href="#" class="text-indigo-600 hover:text-indigo-900 text-sm">View</a>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">{{ flow.description|truncate(100) }}</p>
+                <p class="text-xs text-gray-500">Created: {{ flow.created_at.strftime('%Y-%m-%d') }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="px-6 pb-6 text-center">
+        <p class="text-gray-500">No conversation flows found for this campaign.</p>
+        {% if current_user.is_admin %}
+        <a href="#" class="text-indigo-600 hover:text-indigo-900 mt-2 inline-block">Add your first conversation flow</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Call Statistics Chart -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="p-6">
+        <h3 class="text-lg font-bold mb-4">Call Statistics</h3>
+        <canvas id="callStatsChart" height="300"></canvas>
+    </div>
+</div>
+
+<!-- Recent Calls -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="flex justify-between items-center p-6 pb-4">
+        <h3 class="text-lg font-bold">Recent Calls</h3>
+        <a href="{{ url_for('dashboard.calls') }}?campaign_id={{ campaign.id }}" class="text-indigo-600 hover:text-indigo-900">
+            View All
+        </a>
+    </div>
+    
+    {% if recent_calls %}
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentiment</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for call in recent_calls %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ call.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ call.voter.phone_number }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        {% if call.status == 'completed' %}bg-green-100 text-green-800
+                        {% elif call.status in ['failed', 'busy', 'no-answer'] %}bg-red-100 text-red-800
+                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                        {{ call.status }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ call.duration|default('N/A') }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {% if call.sentiment %}
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        {% if call.sentiment == 'positive' %}bg-green-100 text-green-800
+                        {% elif call.sentiment == 'negative' %}bg-red-100 text-red-800
+                        {% else %}bg-blue-100 text-blue-800{% endif %}">
+                        {{ call.sentiment }}
+                    </span>
+                    {% else %}
+                    <span class="text-gray-400">N/A</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <a href="{{ url_for('dashboard.call_detail', id=call.id) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="p-6 text-center">
+        <p class="text-gray-500">No calls have been made for this campaign yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Call Statistics Chart
+        const ctx = document.getElementById('callStatsChart').getContext('2d');
+        
+        // Prepare data for daily call counts
+        const dailyLabels = [];
+        const dailyData = [];
+        
+        {% for date, count in stats.daily_counts.items() %}
+        dailyLabels.push('{{ date }}');
+        dailyData.push({{ count }});
+        {% endfor %}
+        
+        // Create the chart
+        const callStatsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: 'Daily Calls',
+                    data: dailyData,
+                    backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                    borderColor: 'rgba(79, 70, 229, 1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointBackgroundColor: 'rgba(79, 70, 229, 1)'
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true
+                    },
+                    title: {
+                        display: true,
+                        text: 'Daily Call Volume'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

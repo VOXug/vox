@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Voter List: {{ voter_list.name }} - VOX{% endblock %}
+
+{% block heading %}Voter List: {{ voter_list.name }}{% endblock %}
+
+{% block content %}
+<!-- List Header -->
+<div class="flex justify-between items-center mb-6">
+  <div class="flex items-center">
+    <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 mr-4">
+      <i class="fas fa-users text-2xl"></i>
+    </div>
+    <div>
+      <h2 class="text-xl font-bold">{{ voter_list.name }}</h2>
+      <p class="text-gray-500">{{ voter_list.description }}</p>
+    </div>
+  </div>
+  
+  <div class="flex space-x-2">
+    <a href="{{ url_for('dashboard.add_voter', list_id=voter_list.id) }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-user-plus mr-1"></i> Add Voter
+    </a>
+    <a href="{{ url_for('dashboard.edit_voter_list', list_id=voter_list.id) }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+      <i class="fas fa-edit mr-1"></i> Edit List
+    </a>
+    <a href="{{ url_for('dashboard.voter_lists') }}" class="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-200">
+      <i class="fas fa-arrow-left mr-1"></i> Back to Lists
+    </a>
+  </div>
+</div>
+
+<!-- List Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+  <div class="bg-white p-6 rounded-lg shadow border-l-4 border-indigo-500">
+    <div class="flex items-center">
+      <div class="p-3 rounded-full bg-indigo-100 text-indigo-500 mr-4">
+        <i class="fas fa-users text-xl"></i>
+      </div>
+      <div>
+        <p class="text-gray-500 text-sm">Total Voters</p>
+        <p class="text-2xl font-bold">{{ voters.total }}</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+    <div class="flex items-center">
+      <div class="p-3 rounded-full bg-green-100 text-green-500 mr-4">
+        <i class="fas fa-phone-volume text-xl"></i>
+      </div>
+      <div>
+        <p class="text-gray-500 text-sm">Called Voters</p>
+        <p class="text-2xl font-bold">{{ called_count|default(0) }}</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+    <div class="flex items-center">
+      <div class="p-3 rounded-full bg-red-100 text-red-500 mr-4">
+        <i class="fas fa-phone-slash text-xl"></i>
+      </div>
+      <div>
+        <p class="text-gray-500 text-sm">Do Not Call</p>
+        <p class="text-2xl font-bold">{{ dnc_count|default(0) }}</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
+    <div class="flex items-center">
+      <div class="p-3 rounded-full bg-yellow-100 text-yellow-500 mr-4">
+        <i class="fas fa-calendar-alt text-xl"></i>
+      </div>
+      <div>
+        <p class="text-gray-500 text-sm">Created On</p>
+        <p class="text-xl font-bold">{{ voter_list.created_at.strftime('%Y-%m-%d') }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Voters Table -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+    <h3 class="text-lg font-bold">Voters</h3>
+    
+    <div class="flex items-center">
+      <div class="relative mr-4">
+        <input type="text" id="voterSearch" placeholder="Search voters..." class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 pl-10">
+        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+      </div>
+      
+      <div>
+        <button id="exportBtn" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+          <i class="fas fa-file-export mr-1"></i> Export
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  {% if voters.items %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Language</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Called</th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        {% for voter in voters.items %}
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="ml-4">
+                <div class="text-sm font-medium text-gray-900">{{ voter.name or 'Unknown Voter' }}</div>
+                <div class="text-sm text-gray-500">ID: {{ voter.id }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">{{ voter.phone_number }}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">{{ voter.location or 'N/A' }}</div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">
+              {% if voter.language_preference == 'en' %}English
+              {% elif voter.language_preference == 'sw' %}Swahili
+              {% elif voter.language_preference == 'lg' %}Luganda
+              {% elif voter.language_preference == 'ny' %}Runyankole
+              {% else %}{{ voter.language_preference or 'Not specified' }}
+              {% endif %}
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            {% if voter.do_not_call %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+              Do Not Call
+            </span>
+            {% else %}
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+              Active
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="text-sm text-gray-900">
+              {% if voter.last_called_at %}
+                {{ voter.last_called_at.strftime('%Y-%m-%d %H:%M') }}
+              {% else %}
+                Never
+              {% endif %}
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <a href="{{ url_for('dashboard.voter_detail', voter_id=voter.id) }}" class="text-indigo-600 hover:text-indigo-900 mr-3">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('dashboard.edit_voter', voter_id=voter.id) }}" class="text-blue-600 hover:text-blue-900 mr-3">
+              <i class="fas fa-edit"></i>
+            </a>
+            <a href="#" class="text-red-600 hover:text-red-900 delete-voter" data-voter-id="{{ voter.id }}">
+              <i class="fas fa-trash"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Pagination -->
+  {% if voters.pages > 1 %}
+  <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+    <nav class="flex items-center justify-between">
+      <div class="flex-1 flex justify-between sm:hidden">
+        {% if voters.has_prev %}
+        <a href="{{ url_for('dashboard.voter_list_detail', list_id=voter_list.id, page=voters.prev_num) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          Previous
+        </a>
+        {% else %}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-gray-100 cursor-not-allowed">
+          Previous
+        </span>
+        {% endif %}
+        
+        {% if voters.has_next %}
+        <a href="{{ url_for('dashboard.voter_list_detail', list_id=voter_list.id, page=voters.next_num) }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+          Next
+        </a>
+        {% else %}
+        <span class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-300 bg-gray-100 cursor-not-allowed">
+          Next
+        </span>
+        {% endif %}
+      </div>
+      
+      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm text-gray-700">
+            Showing <span class="font-medium">{{ voters.page * voters.per_page - voters.per_page + 1 }}</span> to <span class="font-medium">{{ min(voters.page * voters.per_page, voters.total) }}</span> of <span class="font-medium">{{ voters.total }}</span> results
+          </p>
+        </div>
+        
+        <div>
+          <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            {% if voters.has_prev %}
+            <a href="{{ url_for('dashboard.voter_list_detail', list_id=voter_list.id, page=voters.prev_num) }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <span class="sr-only">Previous</span>
+              <i class="fas fa-chevron-left"></i>
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+              <span class="sr-only">Previous</span>
+              <i class="fas fa-chevron-left"></i>
+            </span>
+            {% endif %}
+            
+            {% for page_num in voters.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+              {% if page_num %}
+                {% if page_num == voters.page %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-indigo-500 bg-indigo-50 text-sm font-medium text-indigo-600">
+                  {{ page_num }}
+                </span>
+                {% else %}
+                <a href="{{ url_for('dashboard.voter_list_detail', list_id=voter_list.id, page=page_num) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  {{ page_num }}
+                </a>
+                {% endif %}
+              {% else %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  ...
+                </span>
+              {% endif %}
+            {% endfor %}
+            
+            {% if voters.has_next %}
+            <a href="{{ url_for('dashboard.voter_list_detail', list_id=voter_list.id, page=voters.next_num) }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <span class="sr-only">Next</span>
+              <i class="fas fa-chevron-right"></i>
+            </a>
+            {% else %}
+            <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+              <span class="sr-only">Next</span>
+              <i class="fas fa-chevron-right"></i>
+            </span>
+            {% endif %}
+          </nav>
+        </div>
+      </div>
+    </nav>
+  </div>
+  {% endif %}
+  
+  {% else %}
+  <div class="text-center py-12">
+    <div class="text-indigo-500 mb-4">
+      <i class="fas fa-users text-6xl"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No voters found</h3>
+    <p class="text-gray-500 mb-6">This list doesn't have any voters yet</p>
+    <div class="flex justify-center">
+      <a href="{{ url_for('dashboard.add_voter', list_id=voter_list.id) }}" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+        <i class="fas fa-user-plus mr-1"></i> Add Voter
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- List Actions -->
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">List Actions</h3>
+  
+  <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <h4 class="font-medium text-gray-900 mb-3">Campaign Assignment</h4>
+      <p class="text-gray-500 mb-4">Assign this voter list to a campaign to start making calls</p>
+      
+      <form method="POST" action="{{ url_for('dashboard.assign_campaign', list_id=voter_list.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="mb-4">
+          <label for="campaignId" class="block text-gray-700 font-medium mb-2">Select Campaign</label>
+          <select id="campaignId" name="campaign_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">-- Select a Campaign --</option>
+            {% for campaign in campaigns %}
+            <option value="{{ campaign.id }}">{{ campaign.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <button type="submit" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+          <i class="fas fa-link mr-1"></i> Assign to Campaign
+        </button>
+      </form>
+    </div>
+    
+    <div>
+      <h4 class="font-medium text-gray-900 mb-3">Bulk Actions</h4>
+      <p class="text-gray-500 mb-4">Perform actions on multiple voters at once</p>
+      
+      <div class="space-y-3">
+        <button id="bulkExportBtn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <i class="fas fa-file-export mr-2"></i> Export All Voters
+        </button>
+        
+        <button id="bulkDeleteBtn" class="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+          <i class="fas fa-trash mr-2"></i> Delete List
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Confirm Deletion</h3>
+    </div>
+    
+    <div class="p-6">
+      <p class="text-gray-700 mb-6">Are you sure you want to delete this voter? This action cannot be undone.</p>
+      
+      <div class="flex justify-end">
+        <button id="cancelDelete" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+          Cancel
+        </button>
+        <form id="deleteForm" action="" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete List Confirmation Modal -->
+<div id="deleteListModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+    <div class="p-4 border-b border-gray-200">
+      <h3 class="text-lg font-bold">Confirm List Deletion</h3>
+    </div>
+    
+    <div class="p-6">
+      <p class="text-gray-700 mb-6">Are you sure you want to delete this entire voter list? This will remove all {{ voters.total }} voters and cannot be undone.</p>
+      
+      <div class="flex justify-end">
+        <button id="cancelListDelete" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition duration-200 mr-2">
+          Cancel
+        </button>
+        <form action="{{ url_for('dashboard.delete_voter_list', list_id=voter_list.id) }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-200">
+            Delete List
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Delete voter modal
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteButtons = document.querySelectorAll('.delete-voter');
+    const cancelDelete = document.getElementById('cancelDelete');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    function showDeleteModal(voterId) {
+      deleteForm.action = "{{ url_for('dashboard.delete_voter', voter_id=0) }}".replace('0', voterId);
+      deleteModal.classList.remove('hidden');
+    }
+    
+    function hideDeleteModal() {
+      deleteModal.classList.add('hidden');
+    }
+    
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        const voterId = this.dataset.voterId;
+        showDeleteModal(voterId);
+      });
+    });
+    
+    cancelDelete.addEventListener('click', hideDeleteModal);
+    
+    // Delete list modal
+    const deleteListModal = document.getElementById('deleteListModal');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const cancelListDelete = document.getElementById('cancelListDelete');
+    
+    function showDeleteListModal() {
+      deleteListModal.classList.remove('hidden');
+    }
+    
+    function hideDeleteListModal() {
+      deleteListModal.classList.add('hidden');
+    }
+    
+    bulkDeleteBtn.addEventListener('click', showDeleteListModal);
+    cancelListDelete.addEventListener('click', hideDeleteListModal);
+    
+    // Search functionality
+    const voterSearch = document.getElementById('voterSearch');
+    
+    voterSearch.addEventListener('keyup', function() {
+      const searchTerm = this.value.toLowerCase();
+      const rows = document.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        const name = row.querySelector('td:first-child .text-sm.font-medium').textContent.toLowerCase();
+        const phone = row.querySelector('td:nth-child(2) .text-sm').textContent.toLowerCase();
+        const location = row.querySelector('td:nth-child(3) .text-sm').textContent.toLowerCase();
+        
+        if (name.includes(searchTerm) || phone.includes(searchTerm) || location.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+    
+    // Export functionality
+    const exportBtn = document.getElementById('exportBtn');
+    const bulkExportBtn = document.getElementById('bulkExportBtn');
+    
+    function exportToCSV() {
+      window.location.href = "{{ url_for('dashboard.export_voters', list_id=voter_list.id) }}";
+    }
+    
+    exportBtn.addEventListener('click', exportToCSV);
+    bulkExportBtn.addEventListener('click', exportToCSV);
+  });
+</script>
+{% endblock %}

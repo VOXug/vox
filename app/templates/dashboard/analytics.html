@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - VOX{% endblock %}
+
+{% block heading %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Date Range Filter -->
+<div class="bg-white p-6 rounded-lg shadow mb-6">
+    <h3 class="text-lg font-bold mb-4">Date Range</h3>
+    
+    <form method="GET" action="{{ url_for('dashboard.analytics') }}" class="flex flex-wrap items-center">
+        <div class="mr-4 mb-2">
+            <label for="days" class="block text-gray-700 font-medium mb-2">Time Period</label>
+            <select name="days" id="days" class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" onchange="this.form.submit()">
+                <option value="1" {% if days == 1 %}selected{% endif %}>Last 24 Hours</option>
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 Days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-500 mr-4">
+                <i class="fas fa-phone text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Total Calls</p>
+                <p class="text-2xl font-bold">{{ call_stats.total_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-500 mr-4">
+                <i class="fas fa-check-circle text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Completed Calls</p>
+                <p class="text-2xl font-bold">{{ call_stats.completed_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-red-100 text-red-500 mr-4">
+                <i class="fas fa-times-circle text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Failed Calls</p>
+                <p class="text-2xl font-bold">{{ call_stats.failed_calls }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-purple-100 text-purple-500 mr-4">
+                <i class="fas fa-chart-pie text-xl"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm">Avg. Duration</p>
+                <p class="text-2xl font-bold">{{ "%.1f"|format(call_stats.avg_duration) }}s</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Daily Call Volume -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Daily Call Volume</h3>
+        <div class="p-6">
+            <canvas id="dailyCallsChart" height="300"></canvas>
+        </div>
+    </div>
+    
+    <!-- Call Outcomes -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Call Outcomes</h3>
+        <div class="p-6">
+            <canvas id="callOutcomesChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Sentiment Distribution -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Sentiment Distribution</h3>
+        <div class="p-6">
+            <canvas id="sentimentChart" height="300"></canvas>
+        </div>
+    </div>
+    
+    <!-- Language Distribution -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Language Distribution</h3>
+        <div class="p-6">
+            <canvas id="languageChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Stats Tables -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Sentiment Breakdown -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Sentiment Breakdown</h3>
+        
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentiment</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% set total_sentiment = call_stats.sentiment_counts.get('positive', 0) + call_stats.sentiment_counts.get('neutral', 0) + call_stats.sentiment_counts.get('negative', 0) %}
+                {% if total_sentiment > 0 %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Positive
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ call_stats.sentiment_counts.get('positive', 0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ "%.1f"|format(call_stats.sentiment_counts.get('positive', 0) / total_sentiment * 100) }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                Neutral
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ call_stats.sentiment_counts.get('neutral', 0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ "%.1f"|format(call_stats.sentiment_counts.get('neutral', 0) / total_sentiment * 100) }}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                Negative
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ call_stats.sentiment_counts.get('negative', 0) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ "%.1f"|format(call_stats.sentiment_counts.get('negative', 0) / total_sentiment * 100) }}%
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                            No sentiment data available
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Language Breakdown -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <h3 class="text-lg font-bold p-6 pb-4 border-b border-gray-200">Language Breakdown</h3>
+        
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Language</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% set total_languages = namespace(value=0) %}
+                {% for lang, count in language_stats %}
+                    {% set total_languages.value = total_languages.value + count %}
+                {% endfor %}
+                
+                {% if total_languages.value > 0 %}
+                    {% for lang, count in language_stats %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if lang == 'en' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        English
+                                    </span>
+                                {% elif lang == 'sw' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        Swahili
+                                    </span>
+                                {% elif lang == 'lg' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                        Luganda
+                                    </span>
+                                {% elif lang == 'ny' %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                        Runyankole
+                                    </span>
+                                {% else %}
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                        {{ lang }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ count }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ "%.1f"|format(count / total_languages.value * 100) }}%
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                            No language data available
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Export Options -->
+<div class="mt-6 flex justify-end">
+    <a href="#" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200 mr-2">
+        <i class="fas fa-file-excel mr-1"></i> Export to Excel
+    </a>
+    <a href="#" class="bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">
+        <i class="fas fa-file-pdf mr-1"></i> Export to PDF
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Daily Call Volume Chart
+        fetch("{{ url_for('dashboard.api_call_stats', days=days) }}")
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('dailyCallsChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Daily Calls',
+                            data: data.data,
+                            backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            pointBackgroundColor: 'rgba(79, 70, 229, 1)'
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        },
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: true
+                            }
+                        }
+                    }
+                });
+            });
+        
+        // Call Outcomes Chart
+        const outcomeCtx = document.getElementById('callOutcomesChart').getContext('2d');
+        new Chart(outcomeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Failed', 'Other'],
+                datasets: [{
+                    data: [
+                        {{ call_stats.completed_calls }},
+                        {{ call_stats.failed_calls }},
+                        {{ call_stats.total_calls - call_stats.completed_calls - call_stats.failed_calls }}
+                    ],
+                    backgroundColor: [
+                        'rgba(72, 187, 120, 0.7)',
+                        'rgba(237, 100, 166, 0.7)',
+                        'rgba(237, 137, 54, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(72, 187, 120, 1)',
+                        'rgba(237, 100, 166, 1)',
+                        'rgba(237, 137, 54, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Sentiment Distribution Chart
+        const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+        new Chart(sentimentCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Positive', 'Neutral', 'Negative'],
+                datasets: [{
+                    data: [
+                        {{ call_stats.sentiment_counts.get('positive', 0) }},
+                        {{ call_stats.sentiment_counts.get('neutral', 0) }},
+                        {{ call_stats.sentiment_counts.get('negative', 0) }}
+                    ],
+                    backgroundColor: [
+                        'rgba(72, 187, 120, 0.7)',
+                        'rgba(66, 153, 225, 0.7)',
+                        'rgba(237, 100, 166, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(72, 187, 120, 1)',
+                        'rgba(66, 153, 225, 1)',
+                        'rgba(237, 100, 166, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Language Distribution Chart
+        const languageCtx = document.getElementById('languageChart').getContext('2d');
+        const languageLabels = [];
+        const languageData = [];
+        const languageColors = [];
+        const languageBorders = [];
+        
+        {% for lang, count in language_stats %}
+        languageLabels.push('{{ lang }}');
+        languageData.push({{ count }});
+        
+        {% if lang == 'en' %}
+        languageColors.push('rgba(66, 153, 225, 0.7)');
+        languageBorders.push('rgba(66, 153, 225, 1)');
+        {% elif lang == 'sw' %}
+        languageColors.push('rgba(72, 187, 120, 0.7)');
+        languageBorders.push('rgba(72, 187, 120, 1)');
+        {% elif lang == 'lg' %}
+        languageColors.push('rgba(237, 137, 54, 0.7)');
+        languageBorders.push('rgba(237, 137, 54, 1)');
+        {% elif lang == 'ny' %}
+        languageColors.push('rgba(159, 122, 234, 0.7)');
+        languageBorders.push('rgba(159, 122, 234, 1)');
+        {% else %}
+        languageColors.push('rgba(160, 174, 192, 0.7)');
+        languageBorders.push('rgba(160, 174, 192, 1)');
+        {% endif %}
+        {% endfor %}
+        
+        new Chart(languageCtx, {
+            type: 'pie',
+            data: {
+                labels: languageLabels,
+                datasets: [{
+                    data: languageData,
+                    backgroundColor: languageColors,
+                    borderColor: languageBorders,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
